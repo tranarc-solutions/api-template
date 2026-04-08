@@ -1,0 +1,64 @@
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+namespace Core.Auth.Cookies;
+
+public static class Startup
+{
+    internal const string MainAppScheme = "MainApp";
+    internal const string BackofficeScheme = "Backoffice";
+
+    public static AuthenticationBuilder AddCookieAuth(this AuthenticationBuilder builder,
+        IConfiguration config, IHostEnvironment environment)
+    {
+        var isDevelopment = environment.IsDevelopment();
+
+        builder.AddCookie(MainAppScheme, options =>
+        {
+            options.Cookie.Name = "{{ name_lower }}.auth";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SecurePolicy = isDevelopment
+                ? Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest
+                : Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
+            options.Cookie.SameSite = isDevelopment
+                ? Microsoft.AspNetCore.Http.SameSiteMode.Lax
+                : Microsoft.AspNetCore.Http.SameSiteMode.None;
+            options.ExpireTimeSpan = TimeSpan.FromHours(24);
+            options.SlidingExpiration = true;
+            options.Events.OnRedirectToLogin = ctx =>
+            {
+                ctx.Response.StatusCode = 401;
+                return Task.CompletedTask;
+            };
+            options.Events.OnRedirectToAccessDenied = ctx =>
+            {
+                ctx.Response.StatusCode = 403;
+                return Task.CompletedTask;
+            };
+        });
+
+        builder.AddCookie(BackofficeScheme, options =>
+        {
+            options.Cookie.Name = "{{ name_lower }}.backoffice";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SecurePolicy = isDevelopment
+                ? Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest
+                : Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
+            options.Cookie.SameSite = isDevelopment
+                ? Microsoft.AspNetCore.Http.SameSiteMode.Lax
+                : Microsoft.AspNetCore.Http.SameSiteMode.None;
+            options.ExpireTimeSpan = TimeSpan.FromHours(8);
+            options.SlidingExpiration = true;
+            options.Events.OnRedirectToLogin = ctx =>
+            {
+                ctx.Response.StatusCode = 401;
+                return Task.CompletedTask;
+            };
+        });
+
+        return builder;
+    }
+}

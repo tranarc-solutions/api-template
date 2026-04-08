@@ -1,0 +1,58 @@
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.Caching;
+
+public interface ICacheService
+{
+    Task<T?> GetAsync<T>(string key, CancellationToken ct = default);
+    Task SetAsync<T>(string key, T value, TimeSpan? expiry = null, CancellationToken ct = default);
+    Task RemoveAsync(string key, CancellationToken ct = default);
+}
+
+internal class LocalCacheService : ICacheService
+{
+    private readonly IMemoryCache _cache;
+
+    public LocalCacheService(IMemoryCache cache) => _cache = cache;
+
+    public Task<T?> GetAsync<T>(string key, CancellationToken ct = default)
+    {
+        return Task.FromResult(_cache.TryGetValue(key, out T? value) ? value : default);
+    }
+
+    public Task SetAsync<T>(string key, T value, TimeSpan? expiry = null, CancellationToken ct = default)
+    {
+        var options = new MemoryCacheEntryOptions();
+        if (expiry.HasValue) options.SetAbsoluteExpiration(expiry.Value);
+        else options.SetSlidingExpiration(TimeSpan.FromMinutes(30));
+        _cache.Set(key, value, options);
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveAsync(string key, CancellationToken ct = default)
+    {
+        _cache.Remove(key);
+        return Task.CompletedTask;
+    }
+}
+
+public class CacheSettings
+{
+    public bool UseDistributedCache { get; set; }
+    public bool PreferRedis { get; set; }
+    public string? RedisURL { get; set; }
+}
+
+public static class Startup
+{
+    public static IServiceCollection AddCaching(this IServiceCollection services, IConfiguration config)
+    {
+        // Default: in-memory cache. To use Redis, add Microsoft.Extensions.Caching.StackExchangeRedis
+        // and configure CacheSettings.UseDistributedCache + PreferRedis in config.
+        services.AddMemoryCache();
+        services.AddTransient<ICacheService, LocalCacheService>();
+        return services;
+    }
+}

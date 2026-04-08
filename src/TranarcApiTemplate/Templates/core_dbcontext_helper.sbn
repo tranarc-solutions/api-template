@@ -1,0 +1,25 @@
+using Core.Persistence.Context;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+
+namespace Core.Common.Helpers;
+
+public interface IDbContextHelper
+{
+    Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default);
+    bool IsInTransaction { get; }
+}
+
+public class DbContextHelper : IDbContextHelper
+{
+    private readonly ApplicationDbContext _context;
+
+    public DbContextHelper(ApplicationDbContext context) => _context = context;
+
+    public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default)
+    {
+        return await _context.Database.BeginTransactionAsync(ct);
+    }
+
+    public bool IsInTransaction => _context.Database.CurrentTransaction is not null;
+}

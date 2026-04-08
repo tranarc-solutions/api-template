@@ -1,0 +1,19 @@
+using Core.Common.Endpoints;
+
+namespace {{ name }}.Host.Features.Health;
+
+public class PingEndpoint : CustomEndpointWithoutRequest<PingResponse>
+{
+    public override void Configure()
+    {
+        Get("/api/ping");
+        AllowAnonymous();
+    }
+
+    protected override Task<ErrorOr<PingResponse>> ProcessAsync(CancellationToken ct)
+    {
+        return Task.FromResult<ErrorOr<PingResponse>>(new PingResponse("pong", DateTime.UtcNow));
+    }
+}
+
+public record PingResponse(string Message, DateTime Timestamp);

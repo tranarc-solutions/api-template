@@ -1,0 +1,5 @@
+{
+  "CorsOrigins": "http://localhost:3000;http://localhost:5173",
+  "CorsMethods": "GET;POST;PUT;PATCH;DELETE;OPTIONS",
+  "CorsHeaders": "Content-Type;Authorization;X-Requested-With;Accept;x-signalr-user-agent"
+}

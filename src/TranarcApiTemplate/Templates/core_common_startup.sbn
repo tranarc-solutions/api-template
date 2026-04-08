@@ -1,0 +1,19 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.Common;
+
+public static class Startup
+{
+    public static IServiceCollection AddCommonServices(this IServiceCollection services, IConfiguration config)
+    {
+        services.Configure<SiteSettings>(config.GetSection(nameof(SiteSettings)));
+        return services;
+    }
+}
+
+public class SiteSettings
+{
+    public string? SiteName { get; set; }
+    public string? SiteUrl { get; set; }
+}

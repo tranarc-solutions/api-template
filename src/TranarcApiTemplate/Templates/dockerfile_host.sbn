@@ -1,0 +1,30 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# Copy csproj files and restore as distinct layers
+COPY ["{{ name }}.Host/{{ name }}.Host.csproj", "{{ name }}.Host/"]
+COPY ["Core/Core.csproj", "Core/"]
+COPY ["Shared/Shared.csproj", "Shared/"]
+COPY ["{{ name }}.SourceGenerator/{{ name }}.SourceGenerator.csproj", "{{ name }}.SourceGenerator/"]
+
+RUN dotnet restore "{{ name }}.Host/{{ name }}.Host.csproj" --disable-parallel
+
+# Copy everything else and build
+COPY . .
+WORKDIR "/src/{{ name }}.Host"
+RUN dotnet publish "{{ name }}.Host.csproj" -c Release -o /app/publish
+
+# Build the runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
+WORKDIR /app
+
+COPY --from=build /app/publish .
+
+# Run as non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser -d /app appuser \
+    && chown -R appuser:appuser /app
+
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
+
+ENTRYPOINT ["dotnet", "{{ name }}.Host.dll"]

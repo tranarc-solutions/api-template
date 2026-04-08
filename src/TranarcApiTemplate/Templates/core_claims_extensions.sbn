@@ -1,0 +1,21 @@
+using System.Security.Claims;
+
+namespace Core.Common.Extensions;
+
+public static class ClaimsPrincipalExtensions
+{
+    public static string? GetUserId(this ClaimsPrincipal user)
+        => user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    public static string? GetDefaultCompanyId(this ClaimsPrincipal user)
+        => user.FindFirst("company_id")?.Value;
+
+    public static string? GetAccountId(this ClaimsPrincipal user)
+        => user.FindFirst("account_id")?.Value;
+
+    public static string? GetEmail(this ClaimsPrincipal user)
+        => user.FindFirst(ClaimTypes.Email)?.Value;
+
+    public static string? IsAccountOwner(this ClaimsPrincipal user)
+        => user.FindFirst("is_owner")?.Value;
+}

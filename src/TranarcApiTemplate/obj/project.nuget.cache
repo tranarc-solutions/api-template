@@ -1,0 +1,145 @@
+{
+  "version": 2,
+  "dgSpecHash": "FsNm8bYx4MI=",
+  "success": true,
+  "projectFilePath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+  "expectedPackageFiles": [
+    "/Users/mac/.nuget/packages/scriban/5.12.0/scriban.5.12.0.nupkg.sha512",
+    "/Users/mac/.nuget/packages/spectre.console/0.49.1/spectre.console.0.49.1.nupkg.sha512",
+    "/Users/mac/.nuget/packages/spectre.console.cli/0.49.1/spectre.console.cli.0.49.1.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'Scriban' 5.12.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-5rpf-x9jg-8j5p",
+      "projectPath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "warningLevel": 1,
+      "filePath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "libraryId": "Scriban",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1904",
+      "level": "Warning",
+      "message": "Package 'Scriban' 5.12.0 has a known critical severity vulnerability, https://github.com/advisories/GHSA-5wr9-m6jw-xx44",
+      "projectPath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "warningLevel": 1,
+      "filePath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "libraryId": "Scriban",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'Scriban' 5.12.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-c875-h985-hvrc",
+      "projectPath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "warningLevel": 1,
+      "filePath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "libraryId": "Scriban",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'Scriban' 5.12.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-grr9-747v-xvcp",
+      "projectPath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "warningLevel": 1,
+      "filePath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "libraryId": "Scriban",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'Scriban' 5.12.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-m2p3-hwv5-xpqw",
+      "projectPath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "warningLevel": 1,
+      "filePath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "libraryId": "Scriban",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'Scriban' 5.12.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-p6q4-fgr8-vx4p",
+      "projectPath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "warningLevel": 1,
+      "filePath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "libraryId": "Scriban",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'Scriban' 5.12.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-v66j-x4hw-fv9g",
+      "projectPath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "warningLevel": 1,
+      "filePath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "libraryId": "Scriban",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'Scriban' 5.12.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-wgh7-7m3c-fx25",
+      "projectPath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "warningLevel": 1,
+      "filePath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "libraryId": "Scriban",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'Scriban' 5.12.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-x6m9-38vm-2xhf",
+      "projectPath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "warningLevel": 1,
+      "filePath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "libraryId": "Scriban",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'Scriban' 5.12.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-xcx6-vp38-8hr5",
+      "projectPath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "warningLevel": 1,
+      "filePath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "libraryId": "Scriban",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'Scriban' 5.12.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-xw6w-9jjh-p9cr",
+      "projectPath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "warningLevel": 1,
+      "filePath": "/Users/mac/RiderProjects/tranarc-api-template/src/TranarcApiTemplate/TranarcApiTemplate.csproj",
+      "libraryId": "Scriban",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+using System.Reflection;
+using Microsoft.Extensions.Configuration;
+
+namespace Core.Configs;
+
+public static class Startup
+{
+    private static (string basePath, string configDir) GetConfigPaths()
+    {
+        var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
+        var configDir = Path.Join(path, "Configurations");
+        return (path, configDir);
+    }
+
+    public static IConfigurationBuilder AddGlobalConfigurations(this IConfigurationBuilder builder,
+        string environmentName)
+    {
+        var (path, cfg) = GetConfigPaths();
+        return builder
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile(Path.Join(path, "appsettings.json"), false, true)
+            .AddJsonFile(Path.Join(path, $"appsettings.{environmentName}.json"), true, true)
+            // Logging
+            .AddJsonFile($"{cfg}/logger.json", false, true)
+            .AddJsonFile($"{cfg}/logger.{environmentName}.json", true, true)
+            // Infrastructure
+            .AddJsonFile($"{cfg}/cache.json", true, true)
+            .AddJsonFile($"{cfg}/cache.{environmentName}.json", true, true)
+            .AddJsonFile($"{cfg}/cors.json", false, true)
+            .AddJsonFile($"{cfg}/cors.{environmentName}.json", true, true)
+            .AddJsonFile($"{cfg}/database.json", false, true)
+            .AddJsonFile($"{cfg}/database.{environmentName}.json", true, true)
+            .AddJsonFile($"{cfg}/security.json", false, true)
+            .AddJsonFile($"{cfg}/security.{environmentName}.json", true, true)
+            .AddJsonFile($"{cfg}/securityheaders.json", false, true)
+            .AddJsonFile($"{cfg}/securityheaders.{environmentName}.json", true, true)
+            .AddJsonFile($"{cfg}/middleware.json", true, true)
+            .AddJsonFile($"{cfg}/middleware.{environmentName}.json", true, true)
+            .AddJsonFile($"{cfg}/resilience.json", true, true)
+            .AddJsonFile($"{cfg}/scalar.json", true, true)
+            .AddJsonFile($"{cfg}/scalar.{environmentName}.json", true, true)
+            .AddJsonFile($"{cfg}/site-settings.json", true, true)
+            .AddJsonFile($"{cfg}/site-settings.{environmentName}.json", true, true)
+            // Local overrides — never committed, loaded last so they win
+            .AddJsonFile($"{cfg}/secrets.Local.json", true, true)
+            .AddEnvironmentVariables();
+    }
+}

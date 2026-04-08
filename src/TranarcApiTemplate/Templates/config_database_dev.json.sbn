@@ -1,0 +1,5 @@
+{
+  "DatabaseSettings": {
+    "ConnectionString": "Host=localhost;Port=5432;Database={{ name_lower }};Username=postgres;Password=postgres"
+  }
+}

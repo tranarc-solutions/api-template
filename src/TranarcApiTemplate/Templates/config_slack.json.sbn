@@ -1,0 +1,6 @@
+{
+  "SlackSettings": {
+    "InfrastructureWebhookUrl": "",
+    "BusinessWebhookUrl": ""
+  }
+}

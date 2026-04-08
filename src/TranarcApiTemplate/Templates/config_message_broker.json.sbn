@@ -1,0 +1,11 @@
+{
+  "ServiceBusSettings": {
+    "QueuePrefix": "{{ name_lower }}"
+  },
+  "RabbitMqSettings": {
+    "Username": "guest",
+    "Password": "guest",
+    "VirtualHost": "/",
+    "Host": "localhost"
+  }
+}

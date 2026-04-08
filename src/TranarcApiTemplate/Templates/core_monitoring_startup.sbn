@@ -1,0 +1,61 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
+
+namespace Core.Monitoring;
+
+public static class Startup
+{
+    public static IServiceCollection AddInfrastructureMonitoring(this IServiceCollection services,
+        IHostEnvironment environment)
+    {
+        if (environment.IsDevelopment())
+            return services;
+
+        return services;
+    }
+
+    public static IHealthChecksBuilder AddHostHealthChecks(this IServiceCollection services,
+        IConfiguration config, IHostEnvironment environment)
+    {
+        var builder = services.AddHealthChecks();
+
+        var dbConn = config["DatabaseSettings:ConnectionString"];
+        if (!string.IsNullOrEmpty(dbConn))
+        {
+            builder.AddNpgSql(dbConn, name: "database",
+                failureStatus: HealthStatus.Unhealthy, tags: ["db", "critical"]);
+        }
+{{~ if has_consumer ~}}
+
+        var isContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+        if (!environment.IsDevelopment() && isContainer)
+        {
+            var sbConn = config["ServiceBusConnectionString"];
+            var prefix = config["ServiceBusSettings:QueuePrefix"] ?? "{{ name_lower }}";
+            if (!string.IsNullOrEmpty(sbConn))
+            {
+                // Add service bus health checks for your queues here
+            }
+        }
+{{~ end ~}}
+
+        return builder;
+    }
+
+    public static IHealthChecksBuilder AddWebhookHealthChecks(this IServiceCollection services,
+        IConfiguration config)
+    {
+        var builder = services.AddHealthChecks();
+
+        var dbConn = config["DatabaseSettings:ConnectionString"];
+        if (!string.IsNullOrEmpty(dbConn))
+        {
+            builder.AddNpgSql(dbConn, name: "database",
+                failureStatus: HealthStatus.Unhealthy, tags: ["db", "critical"]);
+        }
+
+        return builder;
+    }
+}

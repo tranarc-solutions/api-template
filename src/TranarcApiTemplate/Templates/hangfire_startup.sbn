@@ -1,0 +1,97 @@
+using Hangfire;
+using Hangfire.Common;
+using Hangfire.PostgreSql;
+using Hangfire.States;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.Hangfire;
+
+public static class Startup
+{
+    public static bool IsHangfireEnabled(IConfiguration config)
+    {
+        var explicitlyDisabled = string.Equals(config["HangfireSettings:Enabled"], "false", StringComparison.OrdinalIgnoreCase);
+        var connectionString = config.GetConnectionString("DefaultConnection")
+                               ?? config["DatabaseSettings:ConnectionString"];
+        return !explicitlyDisabled && !string.IsNullOrEmpty(connectionString);
+    }
+
+    public static IServiceCollection AddHangfireServices(this IServiceCollection services, IConfiguration config)
+    {
+        var connectionString = config.GetConnectionString("DefaultConnection")
+                               ?? config["DatabaseSettings:ConnectionString"];
+
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            services.AddSingleton<IBackgroundJobClient, NoOpBackgroundJobClient>();
+            return services;
+        }
+
+        services.AddHangfire(configuration => configuration
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(connectionString),
+                new PostgreSqlStorageOptions
+                {
+                    SchemaName = "hangfire",
+                    PrepareSchemaIfNecessary = true,
+                    QueuePollInterval = TimeSpan.FromSeconds(15),
+                    JobExpirationCheckInterval = TimeSpan.FromHours(1),
+                    CountersAggregateInterval = TimeSpan.FromMinutes(5),
+                    DistributedLockTimeout = TimeSpan.FromMinutes(10),
+                    InvisibilityTimeout = TimeSpan.FromMinutes(35)
+                }));
+
+        services.AddHangfireServer(options =>
+        {
+            options.WorkerCount = Environment.ProcessorCount * 2;
+            options.Queues = [HangfireConstants.Queues.Critical, HangfireConstants.Queues.Default, HangfireConstants.Queues.Low];
+            options.ServerName = $"{Environment.MachineName}:{Guid.NewGuid():N}";
+        });
+
+        return services;
+    }
+
+    public static IServiceCollection AddHangfireDashboardOnly(this IServiceCollection services, IConfiguration config)
+    {
+        var connectionString = config.GetConnectionString("DefaultConnection")
+                               ?? config["DatabaseSettings:ConnectionString"];
+
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            services.AddSingleton<IBackgroundJobClient, NoOpBackgroundJobClient>();
+            return services;
+        }
+
+        services.AddHangfire(configuration => configuration
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(connectionString),
+                new PostgreSqlStorageOptions
+                {
+                    SchemaName = "hangfire",
+                    PrepareSchemaIfNecessary = true
+                }));
+
+        return services;
+    }
+
+    private class NoOpBackgroundJobClient : IBackgroundJobClient
+    {
+        public string Create(Job job, IState state) => string.Empty;
+        public bool ChangeState(string jobId, IState state, string? expectedState) => true;
+    }
+}
+
+public static class HangfireConstants
+{
+    public static class Queues
+    {
+        public const string Critical = "critical";
+        public const string Default = "default";
+        public const string Low = "low";
+    }
+}

@@ -1,0 +1,59 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+
+namespace Core.Auth;
+
+public interface IPermissionCacheService
+{
+    Task<IReadOnlyList<string>> GetPermissionsAsync(string userId);
+    void InvalidateCache(string userId);
+}
+
+public class PermissionCacheService : IPermissionCacheService
+{
+    // Simple in-memory cache — replace with Redis for multi-instance
+    private readonly Dictionary<string, (DateTime expiry, List<string> permissions)> _cache = new();
+
+    public Task<IReadOnlyList<string>> GetPermissionsAsync(string userId)
+    {
+        if (_cache.TryGetValue(userId, out var cached) && cached.expiry > DateTime.UtcNow)
+            return Task.FromResult<IReadOnlyList<string>>(cached.permissions);
+
+        return Task.FromResult<IReadOnlyList<string>>([]);
+    }
+
+    public void InvalidateCache(string userId)
+    {
+        _cache.Remove(userId);
+    }
+}
+
+public class PermissionClaimsTransformation : IClaimsTransformation
+{
+    private readonly IPermissionCacheService _permissionCache;
+
+    public PermissionClaimsTransformation(IPermissionCacheService permissionCache)
+    {
+        _permissionCache = permissionCache;
+    }
+
+    public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
+    {
+        var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return principal;
+
+        var permissions = await _permissionCache.GetPermissionsAsync(userId);
+        if (permissions.Count == 0)
+            return principal;
+
+        var identity = principal.Identity as ClaimsIdentity;
+        foreach (var permission in permissions)
+        {
+            if (!identity!.HasClaim(Authorization.{{ name }}Claims.Permission, permission))
+                identity.AddClaim(new Claim(Authorization.{{ name }}Claims.Permission, permission));
+        }
+
+        return principal;
+    }
+}

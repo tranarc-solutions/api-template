@@ -1,0 +1,31 @@
+using Core.Common.Endpoints;
+
+namespace {{ name }}.Webhook.Endpoints;
+
+public class SampleWebhookRequest
+{
+    public string? EventType { get; set; }
+    public string? Payload { get; set; }
+}
+
+public class SampleWebhookResponse
+{
+    public bool Received { get; set; }
+}
+
+public class SampleWebhookEndpoint : CustomEndpoint<SampleWebhookRequest, SampleWebhookResponse>
+{
+    public override void Configure()
+    {
+        Post("/sample");
+        AllowAnonymous();
+        // To add HMAC verification:
+        // PreProcessors(new HmacSecurityPreprocessor<SampleWebhookRequest>("X-Signature", "WebhookSecret"));
+    }
+
+    protected override Task<ErrorOr<SampleWebhookResponse>> ProcessAsync(SampleWebhookRequest req, CancellationToken ct)
+    {
+        // Process webhook payload here
+        return Task.FromResult<ErrorOr<SampleWebhookResponse>>(new SampleWebhookResponse { Received = true });
+    }
+}

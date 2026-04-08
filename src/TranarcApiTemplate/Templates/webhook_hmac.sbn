@@ -1,0 +1,59 @@
+using System.Security.Cryptography;
+using System.Text;
+using FastEndpoints;
+
+namespace {{ name }}.Webhook.Security;
+
+/// <summary>
+///     HMAC-SHA256 verification preprocessor for webhook endpoints.
+///     Validates the signature header against the request body.
+/// </summary>
+public class HmacSecurityPreprocessor<TRequest> : IPreProcessor<TRequest>
+{
+    private readonly string _signatureHeaderName;
+    private readonly string _secretConfigKey;
+
+    public HmacSecurityPreprocessor(string signatureHeaderName = "X-Signature", string secretConfigKey = "WebhookSecret")
+    {
+        _signatureHeaderName = signatureHeaderName;
+        _secretConfigKey = secretConfigKey;
+    }
+
+    public async Task PreProcessAsync(IPreProcessorContext<TRequest> ctx, CancellationToken ct)
+    {
+        var config = ctx.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+        var secret = config[_secretConfigKey];
+
+        if (string.IsNullOrEmpty(secret))
+        {
+            ctx.HttpContext.Response.StatusCode = 500;
+            await ctx.HttpContext.Response.WriteAsync("Webhook secret not configured", ct);
+            return;
+        }
+
+        if (!ctx.HttpContext.Request.Headers.TryGetValue(_signatureHeaderName, out var signatureHeader) ||
+            string.IsNullOrEmpty(signatureHeader))
+        {
+            ctx.HttpContext.Response.StatusCode = 401;
+            await ctx.HttpContext.Response.WriteAsync("Missing signature header", ct);
+            return;
+        }
+
+        ctx.HttpContext.Request.Body.Position = 0;
+        using var reader = new StreamReader(ctx.HttpContext.Request.Body, Encoding.UTF8, leaveOpen: true);
+        var body = await reader.ReadToEndAsync(ct);
+        ctx.HttpContext.Request.Body.Position = 0;
+
+        var hash = HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(body));
+        var expectedSignature = Convert.ToHexStringLower(hash);
+
+        var providedSignature = signatureHeader.ToString().Replace("sha256=", "");
+        if (!CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(expectedSignature),
+                Encoding.UTF8.GetBytes(providedSignature)))
+        {
+            ctx.HttpContext.Response.StatusCode = 401;
+            await ctx.HttpContext.Response.WriteAsync("Invalid signature", ct);
+        }
+    }
+}

@@ -1,0 +1,90 @@
+using Core;
+using Core.Auth;
+using Core.Auth.Identity;
+using Core.Caching;
+using Core.Common.Extensions;
+using Core.Configs;
+using Core.Logging;
+using Core.Middlewares;
+using Core.Persistence;
+using Core.Security;
+using {{ name }}.Consumer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Serilog;
+{{~ if has_hangfire ~}}
+using Core.Hangfire;
+using Hangfire;
+using Startup = Core.Hangfire.Startup;
+{{~ end ~}}
+
+SerilogConfigurator.ConfigureBootstrap();
+
+try
+{
+    var builder = WebApplication.CreateBuilder(args);
+
+    builder.Logging.ClearProviders();
+    builder.Configuration.AddGlobalConfigurations(builder.Environment.EnvironmentName);
+
+    SerilogConfigurator.LoadKeyVault(builder);
+    SerilogConfigurator.ConfigureFull(builder, "{{ name }}.Consumer");
+    builder.Host.UseSerilog();
+
+    // Key Vault is loaded above via SerilogConfigurator.LoadKeyVault
+    builder.Services
+        .AddCurrentUser()
+        .AddIdentity()
+        .AddSerilog()
+        .AddCaching(builder.Configuration)
+        .AddPersistence(builder.Configuration)
+        .AddLifeTimeServices()
+        .AddMessageBroker(builder.Configuration, builder.Environment);
+{{~ if has_hangfire ~}}
+
+    builder.Services.AddHangfireServices(builder.Configuration);
+{{~ end ~}}
+
+    var app = builder.Build();
+
+    app.UseMiddleware<CorrelationIdMiddleware>();
+    app.UseMiddleware<RequestResponseLoggingMiddleware>();
+    app.UseSerilogRequestLogging();
+
+    // Startup grace: return healthy for first 60s while Service Bus AMQP connects
+    var startedAt = DateTimeOffset.UtcNow;
+    app.UseHealthChecks("/api/health", new HealthCheckOptions
+    {
+        ResultStatusCodes =
+        {
+            [HealthStatus.Healthy] = StatusCodes.Status200OK,
+            [HealthStatus.Degraded] = StatusCodes.Status200OK,
+            [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
+        },
+        Predicate = check =>
+        {
+            if (DateTimeOffset.UtcNow - startedAt < TimeSpan.FromSeconds(60)
+                && check.Tags.Contains("messaging"))
+                return false;
+            return true;
+        }
+    });
+{{~ if has_hangfire ~}}
+
+    if (Startup.IsHangfireEnabled(builder.Configuration))
+    {
+        app.Services.GetRequiredService<IGlobalConfiguration>();
+    }
+{{~ end ~}}
+
+    app.Run();
+}
+catch (Exception ex) when (!ex.GetType().Name.Equals("HostAbortedException", StringComparison.Ordinal))
+{
+    Log.Fatal(ex, "Unhandled exception");
+}
+finally
+{
+    Log.Information("Server Shutting down...");
+    Log.CloseAndFlush();
+}

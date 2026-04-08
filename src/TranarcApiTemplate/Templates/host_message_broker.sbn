@@ -1,0 +1,46 @@
+using MassTransit;
+
+namespace {{ name }}.Host;
+
+internal static class MessageBrokerStartup
+{
+    internal static IServiceCollection AddMessageBroker(this IServiceCollection services, IConfiguration configuration,
+        IHostEnvironment environment)
+    {
+        var queuePrefix = configuration["ServiceBusSettings:QueuePrefix"] ?? "{{ name_lower }}";
+
+        return services.AddMassTransit(options =>
+        {
+            options.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter(queuePrefix, false));
+
+            // Register Host-side consumers here (e.g., SignalR notification consumers)
+
+            if (environment.IsEnvironment("Testing"))
+                options.UsingInMemory((context, configurator) => { configurator.ConfigureEndpoints(context); });
+            else if (environment.IsDevelopment())
+            {
+                var rabbitHost = configuration["RabbitMqSettings:Host"];
+                if (string.IsNullOrWhiteSpace(rabbitHost))
+                    options.UsingInMemory((context, configurator) => { configurator.ConfigureEndpoints(context); });
+                else
+                    options.UsingRabbitMq((context, configurator) =>
+                    {
+                        configurator.Host(rabbitHost, configuration["RabbitMqSettings:VirtualHost"], h =>
+                        {
+                            h.Username(configuration["RabbitMqSettings:Username"] ?? "guest");
+                            h.Password(configuration["RabbitMqSettings:Password"] ?? "guest");
+                        });
+                        configurator.ConfigureEndpoints(context);
+                    });
+            }
+            else
+                options.UsingAzureServiceBus((context, configurator) =>
+                {
+                    var connectionString = configuration["ServiceBusConnectionString"];
+                    ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+                    configurator.Host(connectionString);
+                    configurator.ConfigureEndpoints(context);
+                });
+        });
+    }
+}

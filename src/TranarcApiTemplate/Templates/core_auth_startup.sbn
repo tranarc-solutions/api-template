@@ -1,0 +1,83 @@
+using Core.Auth.Cookies;
+using Core.Auth.Identity;
+using Core.Auth.Jwt;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using CookieStartup = Core.Auth.Cookies.Startup;
+using JwtStartup = Core.Auth.Jwt.Startup;
+
+namespace Core.Auth;
+
+public static class Startup
+{
+    private const string SmartScheme = "Smart";
+
+    public static IServiceCollection AddAuth(this IServiceCollection services, IConfiguration config,
+        IHostEnvironment environment)
+    {
+        services.Configure<SecuritySettings>(config.GetSection(nameof(SecuritySettings)));
+
+        services.AddSingleton<IPermissionCacheService, PermissionCacheService>();
+        services.AddScoped<IClaimsTransformation, PermissionClaimsTransformation>();
+
+        services
+            .AddCurrentUser()
+            .AddIdentity()
+            .AddAuthorization()
+            .AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = SmartScheme;
+                options.DefaultChallengeScheme = SmartScheme;
+                options.DefaultSignInScheme = CookieStartup.MainAppScheme;
+            })
+            .AddPolicyScheme(SmartScheme, SmartScheme, options =>
+            {
+                options.ForwardDefaultSelector = context =>
+                {
+                    var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
+                    if (authHeader?.StartsWith("Bearer ") == true)
+                        return JwtStartup.MobileScheme;
+
+                    if (context.Request.Path.StartsWithSegments("/api/backoffice"))
+                        return CookieStartup.BackofficeScheme;
+
+                    return CookieStartup.MainAppScheme;
+                };
+            })
+            .AddCookieAuth(config, environment)
+            .AddJwtAuth(config);
+
+        return services;
+    }
+
+    public static IApplicationBuilder UseAuth(this IApplicationBuilder app)
+    {
+        return app
+            .UseAuthentication()
+            .UseCurrentUser()
+            .UseAuthorization();
+    }
+
+    private static IApplicationBuilder UseCurrentUser(this IApplicationBuilder app)
+    {
+        return app.UseMiddleware<CurrentUserMiddleware>();
+    }
+
+    public static IServiceCollection AddCurrentUser(this IServiceCollection services)
+    {
+        return services
+            .AddScoped<CurrentUserMiddleware>()
+            .AddScoped<ICurrentUser, CurrentUser>()
+            .AddScoped(sp => (ICurrentUserInitializer)sp.GetRequiredService<ICurrentUser>());
+    }
+}
+
+public class SecuritySettings
+{
+    public string? KeyVaultName { get; set; }
+    public string? JwtSecret { get; set; }
+    public int JwtExpirationInMinutes { get; set; } = 60;
+}

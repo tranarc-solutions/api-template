@@ -1,0 +1,39 @@
+using System.Net;
+using Core.Common.Extensions;
+using Core.Common.Helpers;
+
+namespace Core.Common.Endpoints;
+
+public abstract class CustomEndpointWithoutRequestAndResponse : EndpointWithoutRequest
+{
+    protected string UserId => User.GetUserId() ?? string.Empty;
+    protected Guid CompanyId => Guid.TryParse(User.GetDefaultCompanyId(), out var companyId) ? companyId : Guid.Empty;
+    protected Guid AccountId => Guid.TryParse(User.GetAccountId(), out var accountId) ? accountId : Guid.Empty;
+    protected string Email => User.GetEmail() ?? string.Empty;
+
+    protected virtual string GetIpAddress()
+    {
+        return IpAddressHelper.GetClientIpAddress(HttpContext);
+    }
+
+    protected string GetOriginFromRequest()
+    {
+        return $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}{HttpContext.Request.PathBase.Value}";
+    }
+
+    public override async Task HandleAsync(CancellationToken ct)
+    {
+        var result = await ProcessAsync(ct);
+        if (!result.IsError) { await Send.NoContentAsync(ct); return; }
+        foreach (var error in result.Errors)
+            AddError(error.Description, error.Code);
+        var statusCode = result.ErrorTypeToStatusCode();
+        await Send.ErrorsAsync((int)statusCode, ct);
+    }
+
+    protected virtual Task<ErrorOr<Success>> ProcessAsync(CancellationToken ct)
+    {
+        throw new NotImplementedException(
+            $"Override {nameof(ProcessAsync)} or {nameof(HandleAsync)} in {GetType().Name}");
+    }
+}

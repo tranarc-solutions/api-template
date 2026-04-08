@@ -1,0 +1,70 @@
+using Core.Persistence.Context;
+using Core.Persistence.Initialization;
+using Core.Persistence.Repository;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+
+namespace Core.Persistence;
+
+public static class Startup
+{
+    public static async Task InitializeDatabaseAsync(this IServiceProvider provider,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = provider.CreateScope();
+        var databaseInitializer = scope.ServiceProvider.GetRequiredService<ApplicationDbInitializer>();
+        await databaseInitializer.RunAsync(cancellationToken);
+    }
+
+    private static DbContextOptionsBuilder UseDatabase(this DbContextOptionsBuilder builder, string connectionString)
+    {
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+        return builder.UseNpgsql(connectionString, e =>
+        {
+            e.MigrationsAssembly("{{ name }}.Host");
+        });
+    }
+
+    private static IServiceCollection AddRepositories(this IServiceCollection services)
+    {
+        services.AddScoped(typeof(IApplicationRepository<>), typeof(ApplicationRepository<>));
+        return services;
+    }
+
+    public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration config)
+    {
+        return services
+            .Configure<DatabaseSettings>(config.GetSection(nameof(DatabaseSettings)))
+            .AddDbContextFactory<ApplicationDbContext>((provider, builder) =>
+            {
+                var settings = provider.GetRequiredService<IOptions<DatabaseSettings>>().Value;
+                ArgumentNullException.ThrowIfNull(settings.ConnectionString, "DB ConnectionString");
+                builder.UseDatabase(settings.ConnectionString);
+            }, ServiceLifetime.Scoped)
+            .AddScoped(sp => sp.GetRequiredService<IDbContextFactory<ApplicationDbContext>>().CreateDbContext())
+            .AddRepositories()
+            .AddDbInitialize();
+    }
+
+    private static IServiceCollection AddDbInitialize(this IServiceCollection services)
+    {
+        var seederTypes = AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(a => a.GetTypes())
+            .Where(t => t.IsClass && !t.IsAbstract && typeof(ICustomSeeder).IsAssignableFrom(t));
+
+        foreach (var seederType in seederTypes)
+            services.AddTransient(typeof(ICustomSeeder), seederType);
+
+        return services
+            .AddTransient<ApplicationDbInitializer>()
+            .AddTransient<ApplicationDbSeeder>()
+            .AddTransient<CustomSeederRunner>();
+    }
+}
+
+public class DatabaseSettings
+{
+    public string? ConnectionString { get; set; }
+}

@@ -1,0 +1,96 @@
+using System.Text;
+using Core;
+using Core.Auth;
+using Core.Auth.Identity;
+using Core.Caching;
+using Core.Common.Extensions;
+using Core.Configs;
+using Core.Cors;
+using Core.Logging;
+using Core.Middlewares;
+using Core.Monitoring;
+using Core.Persistence;
+using Core.RateLimiting;
+using Core.Security;
+using FastEndpoints.Swagger;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Scalar.AspNetCore;
+using Serilog;
+
+SerilogConfigurator.ConfigureBootstrap();
+
+try
+{
+    var builder = WebApplication.CreateBuilder(args);
+
+    builder.Logging.ClearProviders();
+    builder.Configuration.AddGlobalConfigurations(builder.Environment.EnvironmentName);
+
+    SerilogConfigurator.LoadKeyVault(builder);
+    SerilogConfigurator.ConfigureFull(builder, "{{ name }}.Webhook");
+    builder.Host.UseSerilog();
+
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.Limits.MaxRequestHeadersTotalSize = 32768;
+    });
+
+    // Key Vault is loaded above via SerilogConfigurator.LoadKeyVault
+    builder.Services
+        .AddCorsPolicy(builder.Configuration)
+        .AddCurrentUser()
+        .AddIdentity()
+        .AddSerilog()
+        .AddPersistence(builder.Configuration)
+        .AddLifeTimeServices()
+        .AddRateLimiting()
+        .AddFastEndpoints()
+        .AddWebhookHealthChecks(builder.Configuration).Services
+        .SwaggerDocument(options =>
+        {
+            options.DocumentSettings = doc =>
+            {
+                doc.Title = "{{ name }} Webhook API";
+                doc.Version = "v1";
+                doc.Description = "{{ name }} Webhook API for processing external callbacks.";
+            };
+        });
+
+    var app = builder.Build();
+
+    app.UseMiddleware<CorrelationIdMiddleware>();
+    app.UseMiddleware<RequestResponseLoggingMiddleware>();
+    app.UseCorsPolicy();
+    app.UseRateLimiting();
+    app.UseCustomExceptionHandler(useGenericReason: true);
+    app.UseSecurityHeaders(builder.Configuration, app.Environment.IsDevelopment());
+
+    app.UseFastEndpoints(config =>
+    {
+        config.Endpoints.RoutePrefix = "api/webhooks";
+        config.Errors.UseProblemDetails();
+    });
+
+    app.UseSwaggerGen(config => config.Path = "/openapi/{documentName}.json");
+    app.MapScalarApiReference(options =>
+    {
+        options
+            .WithTitle("{{ name }} Webhook API")
+            .WithOpenApiRoutePattern("/openapi/{documentName}.json")
+            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
+    });
+
+    app.MapHealthChecks("/api/health", new HealthCheckOptions { Predicate = _ => false });
+    app.MapHealthChecks("/api/health/ready");
+
+    app.Run();
+}
+catch (Exception ex) when (!ex.GetType().Name.Equals("HostAbortedException", StringComparison.Ordinal))
+{
+    Log.Fatal(ex, "Unhandled exception");
+}
+finally
+{
+    Log.Information("Server Shutting down...");
+    Log.CloseAndFlush();
+}

@@ -1,0 +1,60 @@
+name: Build & Deploy Staging
+
+concurrency:
+  group: staging-deploy-${{ "{{" }} github.event_name {{ "}}" }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - .gitignore
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - .gitignore
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip running tests'
+        type: boolean
+        default: false
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  test:
+    name: Build & Test
+    if: ${{ "{{" }} inputs.skip_tests != true {{ "}}" }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ "{{" }} env.DOTNET_VERSION {{ "}}" }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ "{{" }} runner.os {{ "}}" }}-${{ "{{" }} hashFiles('**/*.csproj') {{ "}}" }}
+          restore-keys: nuget-${{ "{{" }} runner.os {{ "}}" }}-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      - name: Unit Tests
+        run: dotnet test Tests/{{ name }}.Tests.Unit/{{ name }}.Tests.Unit.csproj --no-build -c Release
+
+      - name: Integration Tests
+        run: dotnet test Tests/{{ name }}.Tests.Integration/{{ name }}.Tests.Integration.csproj --no-build -c Release
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: 'true'

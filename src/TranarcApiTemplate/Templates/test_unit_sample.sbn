@@ -1,0 +1,13 @@
+using Xunit;
+
+namespace {{ name }}.Tests.Unit;
+
+public class SampleTest
+{
+    [Fact]
+    public void Sample_ShouldPass()
+    {
+        // Arrange & Act & Assert
+        Assert.True(true);
+    }
+}

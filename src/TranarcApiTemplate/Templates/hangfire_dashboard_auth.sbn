@@ -1,0 +1,20 @@
+using Hangfire.Dashboard;
+
+namespace Core.Hangfire;
+
+public class HangfireDashboardAuthFilter : IDashboardAuthorizationFilter
+{
+    private readonly bool _isDevelopment;
+
+    public HangfireDashboardAuthFilter(bool isDevelopment) => _isDevelopment = isDevelopment;
+
+    public bool Authorize(DashboardContext context)
+    {
+        // In development, allow unauthenticated access
+        if (_isDevelopment) return true;
+
+        // In production, require authenticated user
+        var httpContext = context.GetHttpContext();
+        return httpContext.User.Identity?.IsAuthenticated == true;
+    }
+}

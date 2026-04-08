@@ -1,0 +1,20 @@
+using Microsoft.AspNetCore.Http;
+
+namespace Core.Common.Helpers;
+
+public static class IpAddressHelper
+{
+    public static string GetClientIpAddress(HttpContext context)
+    {
+        if (context.Request.Headers.TryGetValue("CF-Connecting-IP", out var cfIp) && cfIp.Count > 0)
+            return cfIp.ToString();
+
+        if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor) && forwardedFor.Count > 0)
+        {
+            var ips = forwardedFor.ToString().Split(',', StringSplitOptions.RemoveEmptyEntries);
+            if (ips.Length > 0) return ips[0].Trim();
+        }
+
+        return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    }
+}

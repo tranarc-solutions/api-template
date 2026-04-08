@@ -1,0 +1,166 @@
+using System.Text;
+using Core;
+using Core.Auth.Authorization;
+using Core.Configs;
+using Core.Logging;
+using Core.Monitoring;
+using Core.Persistence;
+using FastEndpoints.Swagger;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Scalar.AspNetCore;
+using Serilog;
+{{~ if has_consumer ~}}
+using {{ name }}.Host;
+{{~ end ~}}
+{{~ if has_hangfire ~}}
+using Hangfire;
+using Core.Hangfire;
+using Startup = Core.Hangfire.Startup;
+{{~ end ~}}
+
+// Stage 1: Bootstrap logger (console only)
+SerilogConfigurator.ConfigureBootstrap();
+
+try
+{
+    var builder = WebApplication.CreateBuilder(args);
+
+    builder.Logging.ClearProviders();
+    builder.Configuration.AddGlobalConfigurations(builder.Environment.EnvironmentName);
+
+    // Stage 2: Load Key Vault EARLY so Slack URL is available for the full logger
+    SerilogConfigurator.LoadKeyVault(builder);
+
+    // Stage 3: Full logger with Slack
+    SerilogConfigurator.ConfigureFull(builder, "{{ name }}.Host");
+    builder.Host.UseSerilog();
+
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.Limits.MaxRequestHeadersTotalSize = 32768;
+        options.Limits.MaxRequestBodySize = 10 * 1024 * 1024;
+    });
+{{~ if has_consumer ~}}
+
+    builder.Services.AddMessageBroker(builder.Configuration, builder.Environment);
+{{~ end ~}}
+
+    builder.Services
+        .AddHostCore(builder.Configuration, builder)
+        .AddFastEndpoints()
+        .AddHostHealthChecks(builder.Configuration, builder.Environment).Services
+        .SwaggerDocument(options =>
+        {
+            options.DocumentSettings = doc =>
+            {
+                doc.Title = "{{ name }}";
+                doc.DocumentName = "v1";
+                doc.Description = "{{ name }} API";
+            };
+        });
+{{~ if has_hangfire ~}}
+
+    builder.Services.AddHangfireDashboardOnly(builder.Configuration);
+{{~ end ~}}
+
+    var app = builder.Build();
+
+    app
+        .UseHostCore(builder.Configuration, builder.Environment.IsDevelopment())
+        .UseFastEndpoints(config =>
+        {
+            config.Endpoints.RoutePrefix = "api";
+            config.Errors.UseProblemDetails();
+            config.Security.PermissionsClaimType = {{ name }}Claims.Permission;
+        });
+
+    // Scalar API documentation with basic auth for non-development
+    app.UseSwaggerGen(config => config.Path = "/openapi/{documentName}.json");
+
+    if (!app.Environment.IsDevelopment())
+    {
+        var scalarUsername = builder.Configuration["ScalarSettings:Username"];
+        var scalarPassword = builder.Configuration["ScalarSettings:Password"];
+
+        if (!string.IsNullOrEmpty(scalarUsername) && !string.IsNullOrEmpty(scalarPassword))
+        {
+            app.Use(async (context, next) =>
+            {
+                if (context.Request.Path.StartsWithSegments("/scalar"))
+                {
+                    var authHeader = context.Request.Headers.Authorization.ToString();
+                    if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Basic "))
+                    {
+                        context.Response.Headers.WWWAuthenticate = "Basic realm=\"API Docs\"";
+                        context.Response.StatusCode = 401;
+                        return;
+                    }
+
+                    var encodedCredentials = authHeader["Basic ".Length..].Trim();
+                    var credentials = Encoding.UTF8.GetString(Convert.FromBase64String(encodedCredentials));
+                    var parts = credentials.Split(':', 2);
+
+                    if (parts.Length != 2 || parts[0] != scalarUsername || parts[1] != scalarPassword)
+                    {
+                        context.Response.Headers.WWWAuthenticate = "Basic realm=\"API Docs\"";
+                        context.Response.StatusCode = 401;
+                        return;
+                    }
+                }
+
+                await next();
+            });
+        }
+    }
+
+    app.MapScalarApiReference(options =>
+    {
+        options
+            .WithTitle("{{ name }} API")
+            .WithTheme(ScalarTheme.Mars)
+            .WithOpenApiRoutePattern("/openapi/{documentName}.json")
+            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
+    });
+
+    // Liveness probe
+    app.MapHealthChecks("/api/health", new HealthCheckOptions
+    {
+        Predicate = _ => false
+    });
+
+    // Readiness probe
+    app.MapHealthChecks("/api/health/ready");
+{{~ if has_hangfire ~}}
+
+    if (Startup.IsHangfireEnabled(builder.Configuration))
+    {
+        app.UseHangfireDashboard("/hangfire", new DashboardOptions
+        {
+            Authorization = [new HangfireDashboardAuthFilter(app.Environment.IsDevelopment())],
+            DashboardTitle = "{{ name }} Jobs",
+            IsReadOnlyFunc = _ => false
+        });
+    }
+{{~ end ~}}
+
+    await app.Services.InitializeDatabaseAsync();
+
+    app.Run();
+}
+catch (Exception ex) when (!ex.GetType().Name.Equals("HostAbortedException", StringComparison.Ordinal))
+{
+    Log.Fatal(ex, "Unhandled exception");
+
+    if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Testing")
+        throw;
+}
+finally
+{
+    Log.Information("Server Shutting down...");
+    Log.CloseAndFlush();
+}
+
+namespace {{ name }}.Host
+{
+    public class Program { }
+}

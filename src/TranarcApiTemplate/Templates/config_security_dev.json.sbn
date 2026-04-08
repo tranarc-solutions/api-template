@@ -1,0 +1,15 @@
+{
+  "JwtSettings": {
+    "Key": "dev-placeholder-key-minimum-32-characters-long-for-testing"
+  },
+  "CookieSettings": {
+    "ExpireAtInMinute": 60,
+    "Name": "{{ name_lower }}.dev",
+    "AllowRefresh": true,
+    "Backoffice": {
+      "ExpireAtInMinute": 30,
+      "Name": "{{ name_lower }}.backoffice.dev",
+      "AllowRefresh": true
+    }
+  }
+}

@@ -1,0 +1,131 @@
+using Azure.Extensions.AspNetCore.Configuration.Secrets;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Serilog;
+using Serilog.Events;
+{{~ if has_slack ~}}
+using Serilog.Sinks.Slack;
+{{~ end ~}}
+
+namespace Core.Logging;
+
+public static class SerilogConfigurator
+{
+{{~ if has_slack ~}}
+    private const string SlackExcludeFilter =
+        "@l = 'Warning' and SourceContext is not null and (" +
+        "StartsWith(SourceContext, 'Microsoft.') or " +
+        "StartsWith(SourceContext, 'System.') or " +
+        "StartsWith(SourceContext, 'Npgsql.') or " +
+        "StartsWith(SourceContext, 'FastEndpoints.'))";
+
+    private static readonly List<string> SlackPropertyAllowList =
+    [
+        "Environment", "RequestPath", "CorrelationId", "UserId", "CompanyId",
+        "ServiceName", "SourceContext", "Message", "Type", "Exception", "Stack Trace"
+    ];
+{{~ end ~}}
+
+    public static void ConfigureBootstrap()
+    {
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("System", LogEventLevel.Warning)
+            .Enrich.FromLogContext()
+            .WriteTo.Console(outputTemplate:
+                "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .CreateLogger();
+    }
+
+    public static void LoadKeyVault(WebApplicationBuilder builder)
+    {
+        var keyVaultName = builder.Configuration["SecuritySettings:KeyVaultName"];
+        var skipKeyVault = builder.Configuration["SKIP_KEY_VAULT"];
+        if (builder.Environment.IsDevelopment() || string.IsNullOrEmpty(keyVaultName) || skipKeyVault == "true")
+            return;
+
+        try
+        {
+            var secretClient = new SecretClient(
+                new Uri($"https://{keyVaultName}.vault.azure.net/"),
+                new DefaultAzureCredential());
+            builder.Configuration.AddAzureKeyVault(secretClient, new KeyVaultSecretManager());
+            builder.Configuration["KeyVaultLoaded"] = "true";
+            Log.Information("Key Vault loaded: {KeyVaultName}", keyVaultName);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to load Key Vault '{KeyVaultName}'", keyVaultName);
+        }
+    }
+
+    public static void ConfigureFull(WebApplicationBuilder builder, string serviceName)
+    {
+        var env = builder.Environment.EnvironmentName;
+
+        var loggerConfig = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
+            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+            .MinimumLevel.Override("System", LogEventLevel.Warning)
+            .Enrich.FromLogContext()
+            .Enrich.WithMachineName()
+            .Enrich.WithEnvironmentName()
+            .Enrich.WithProcessId()
+            .Enrich.WithProperty("ServiceName", serviceName)
+            .Enrich.WithProperty("Environment", env);
+
+        loggerConfig.ReadFrom.Configuration(builder.Configuration);
+
+        loggerConfig.WriteTo.Console(outputTemplate:
+            "[{Timestamp:HH:mm:ss} {Level:u3}] [{ServiceName}]{RequestPath} {Message:lj}{NewLine}{Exception}");
+{{~ if has_slack ~}}
+
+        AddSlackSink(builder.Configuration, env, serviceName, loggerConfig);
+{{~ end ~}}
+
+        Log.Logger = loggerConfig.CreateLogger();
+        Log.Information("{ServiceName} logger configured for {Environment}", serviceName, env);
+    }
+{{~ if has_slack ~}}
+
+    private static void AddSlackSink(IConfiguration config, string env, string serviceName,
+        LoggerConfiguration loggerConfig)
+    {
+        if (string.Equals(env, "Testing", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var slackWebhookUrl = config["SlackUrlWithAccessToken"];
+        if (string.IsNullOrEmpty(slackWebhookUrl))
+            return;
+
+        var channelName = env == "Production" ? "#{{ name_lower }}-alerts" : "#{{ name_lower }}-staging";
+        var botName = env == "Production"
+            ? $"{{ name }} Prod — {serviceName.Replace("{{ name }}.", "")}"
+            : $"{{ name }} {env} — {serviceName.Replace("{{ name }}.", "")}";
+        var icon = env == "Production" ? ":rotating_light:" : ":construction:";
+
+        loggerConfig.WriteTo.Logger(lc => lc
+            .Filter.ByExcluding(SlackExcludeFilter)
+            .WriteTo.Slack(slackWebhookUrl,
+                outputTemplate: "{Message:lj}",
+                customChannel: channelName,
+                customUsername: botName,
+                customIcon: icon,
+                batchSizeLimit: 10,
+                period: TimeSpan.FromSeconds(5),
+                showDefaultAttachments: true,
+                showPropertyAttachments: true,
+                propertyAttachmentsShortFormat: true,
+                propertyAllowList: SlackPropertyAllowList,
+                showExceptionAttachments: true,
+                restrictedToMinimumLevel: LogEventLevel.Warning));
+    }
+{{~ end ~}}
+}

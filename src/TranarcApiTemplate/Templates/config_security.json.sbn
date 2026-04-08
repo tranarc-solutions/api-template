@@ -1,0 +1,7 @@
+{
+  "SecuritySettings": {
+    "KeyVaultName": "",
+    "JwtSecret": "",
+    "JwtExpirationInMinutes": 60
+  }
+}

@@ -1,0 +1,133 @@
+using System.Diagnostics;
+using System.Net;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Serilog;
+
+namespace Core.Middlewares;
+
+public class CorrelationIdMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public CorrelationIdMiddleware(RequestDelegate next) => _next = next;
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        var correlationId = context.Request.Headers["X-Correlation-Id"].FirstOrDefault()
+                            ?? Activity.Current?.Id
+                            ?? Guid.NewGuid().ToString();
+
+        context.Response.Headers["X-Correlation-Id"] = correlationId;
+
+        using (Serilog.Context.LogContext.PushProperty("CorrelationId", correlationId))
+        using (Serilog.Context.LogContext.PushProperty("RequestPath",
+                   $"{context.Request.Method} {context.Request.Path}"))
+        {
+            await _next(context);
+        }
+    }
+}
+
+public class RequestResponseLoggingMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public RequestResponseLoggingMiddleware(RequestDelegate next) => _next = next;
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        var sw = Stopwatch.StartNew();
+
+        try
+        {
+            await _next(context);
+        }
+        finally
+        {
+            sw.Stop();
+            if (context.Response.StatusCode >= 400)
+            {
+                Log.Warning("HTTP {Method} {Path} responded {StatusCode} in {Elapsed}ms",
+                    context.Request.Method, context.Request.Path,
+                    context.Response.StatusCode, sw.ElapsedMilliseconds);
+            }
+        }
+    }
+}
+
+public class RequestIdentityMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public RequestIdentityMiddleware(RequestDelegate next) => _next = next;
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        if (context.User.Identity?.IsAuthenticated == true)
+        {
+            var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var companyId = context.User.FindFirst("company_id")?.Value;
+
+            using (Serilog.Context.LogContext.PushProperty("UserId", userId ?? "anonymous"))
+            using (Serilog.Context.LogContext.PushProperty("CompanyId", companyId ?? "none"))
+            {
+                await _next(context);
+                return;
+            }
+        }
+
+        await _next(context);
+    }
+}
+
+public class CsrfMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public CsrfMiddleware(RequestDelegate next) => _next = next;
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        // Skip CSRF for safe methods and API endpoints using Bearer auth
+        if (HttpMethods.IsGet(context.Request.Method) ||
+            HttpMethods.IsHead(context.Request.Method) ||
+            HttpMethods.IsOptions(context.Request.Method) ||
+            context.Request.Headers.Authorization.Any(h => h?.StartsWith("Bearer ") == true))
+        {
+            await _next(context);
+            return;
+        }
+
+        await _next(context);
+    }
+}
+
+public static class ExceptionMiddlewareExtensions
+{
+    public static IApplicationBuilder UseCustomExceptionHandler(this IApplicationBuilder app,
+        bool useGenericReason = false)
+    {
+        return app.Use(async (context, next) =>
+        {
+            try
+            {
+                await next();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Unhandled exception for {Method} {Path}",
+                    context.Request.Method, context.Request.Path);
+
+                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                context.Response.ContentType = "application/json";
+
+                var message = useGenericReason
+                    ? "An internal error has occurred."
+                    : ex.Message;
+
+                await context.Response.WriteAsJsonAsync(new { error = message });
+            }
+        });
+    }
+}

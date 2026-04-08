@@ -1,0 +1,76 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Shared.Contracts.Interfaces;
+
+namespace Core.PaymentGateway;
+
+public enum TransferType { BankTransfer, WalletToWallet }
+public enum TransferStatus { Pending, Processing, Completed, Failed }
+
+public interface IPaymentProvider
+{
+    string ProviderName { get; }
+    Task<TransferResult> InitiateTransferAsync(TransferRequest request, CancellationToken ct = default);
+    Task<TransferStatus> CheckStatusAsync(string transferReference, CancellationToken ct = default);
+}
+
+public class TransferRequest
+{
+    public required string Recipient { get; init; }
+    public required decimal Amount { get; init; }
+    public required string Currency { get; init; }
+    public TransferType Type { get; init; } = TransferType.BankTransfer;
+    public string? Narration { get; init; }
+    public string? BankCode { get; init; }
+    public string? AccountNumber { get; init; }
+    public string? WalletId { get; init; }
+    public string? Reference { get; init; }
+}
+
+public class TransferResult
+{
+    public bool Success { get; init; }
+    public string? Reference { get; init; }
+    public string? Message { get; init; }
+    public TransferStatus Status { get; init; }
+}
+
+public interface IPaymentProviderResolver : IScopedService
+{
+    IPaymentProvider Resolve(string? providerName = null);
+}
+
+public class PaymentProviderResolver : IPaymentProviderResolver
+{
+    private readonly IEnumerable<IPaymentProvider> _providers;
+    private readonly string _defaultProvider;
+
+    public PaymentProviderResolver(IEnumerable<IPaymentProvider> providers, IConfiguration config)
+    {
+        _providers = providers;
+        _defaultProvider = config["PaymentGatewaySettings:DefaultProvider"] ?? "default";
+    }
+
+    public IPaymentProvider Resolve(string? providerName = null)
+    {
+        var name = providerName ?? _defaultProvider;
+        return _providers.FirstOrDefault(p => p.ProviderName.Equals(name, StringComparison.OrdinalIgnoreCase))
+               ?? throw new InvalidOperationException($"Payment provider '{name}' not found. Available: {string.Join(", ", _providers.Select(p => p.ProviderName))}");
+    }
+}
+
+public static class PaymentGatewayStartup
+{
+    public static IServiceCollection AddPaymentGateway(this IServiceCollection services, IConfiguration config)
+    {
+        services.Configure<PaymentGatewaySettings>(config.GetSection(nameof(PaymentGatewaySettings)));
+        // Register your IPaymentProvider implementations here:
+        // services.AddScoped<IPaymentProvider, YourPaymentProvider>();
+        return services;
+    }
+}
+
+public class PaymentGatewaySettings
+{
+    public string DefaultProvider { get; set; } = "default";
+}

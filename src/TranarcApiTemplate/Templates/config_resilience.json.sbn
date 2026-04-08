@@ -1,0 +1,7 @@
+{
+  "ResilienceSettings": {
+    "MaxRetry": 3,
+    "DelayInSeconds": 2,
+    "TimeoutInSeconds": 30
+  }
+}

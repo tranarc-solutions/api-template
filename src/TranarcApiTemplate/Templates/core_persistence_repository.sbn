@@ -1,0 +1,69 @@
+using System.Linq.Expressions;
+using Core.Persistence.Context;
+using Core.Persistence.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace Core.Persistence.Repository;
+
+public interface IApplicationRepository<T> where T : AuditableEntity
+{
+    IQueryable<T> Query();
+    IQueryable<T> QueryNoTracking();
+    Task<T?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<T> AddAsync(T entity, CancellationToken ct = default);
+    Task AddRangeAsync(IEnumerable<T> entities, CancellationToken ct = default);
+    Task UpdateAsync(T entity, CancellationToken ct = default);
+    Task DeleteAsync(T entity, CancellationToken ct = default);
+    Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate, CancellationToken ct = default);
+    Task<int> SaveChangesAsync(CancellationToken ct = default);
+}
+
+public class ApplicationRepository<T> : IApplicationRepository<T> where T : AuditableEntity
+{
+    private readonly ApplicationDbContext _context;
+    private readonly DbSet<T> _dbSet;
+
+    public ApplicationRepository(ApplicationDbContext context)
+    {
+        _context = context;
+        _dbSet = context.Set<T>();
+    }
+
+    public IQueryable<T> Query() => _dbSet.Where(e => e.DeletedOn == null);
+    public IQueryable<T> QueryNoTracking() => _dbSet.AsNoTracking().Where(e => e.DeletedOn == null);
+
+    public async Task<T?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => await _dbSet.FirstOrDefaultAsync(e => e.Id == id && e.DeletedOn == null, ct);
+
+    public async Task<T> AddAsync(T entity, CancellationToken ct = default)
+    {
+        await _dbSet.AddAsync(entity, ct);
+        await _context.SaveChangesAsync(ct);
+        return entity;
+    }
+
+    public async Task AddRangeAsync(IEnumerable<T> entities, CancellationToken ct = default)
+    {
+        await _dbSet.AddRangeAsync(entities, ct);
+        await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task UpdateAsync(T entity, CancellationToken ct = default)
+    {
+        _dbSet.Update(entity);
+        await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task DeleteAsync(T entity, CancellationToken ct = default)
+    {
+        entity.DeletedOn = DateTime.UtcNow;
+        _dbSet.Update(entity);
+        await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate, CancellationToken ct = default)
+        => await _dbSet.Where(e => e.DeletedOn == null).AnyAsync(predicate, ct);
+
+    public async Task<int> SaveChangesAsync(CancellationToken ct = default)
+        => await _context.SaveChangesAsync(ct);
+}

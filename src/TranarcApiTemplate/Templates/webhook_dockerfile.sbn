@@ -1,0 +1,26 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+COPY ["{{ name }}.Webhook/{{ name }}.Webhook.csproj", "{{ name }}.Webhook/"]
+COPY ["Core/Core.csproj", "Core/"]
+COPY ["Shared/Shared.csproj", "Shared/"]
+COPY ["{{ name }}.SourceGenerator/{{ name }}.SourceGenerator.csproj", "{{ name }}.SourceGenerator/"]
+
+RUN dotnet restore "{{ name }}.Webhook/{{ name }}.Webhook.csproj" --disable-parallel
+
+COPY . .
+WORKDIR "/src/{{ name }}.Webhook"
+RUN dotnet publish "{{ name }}.Webhook.csproj" -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
+WORKDIR /app
+
+COPY --from=build /app/publish .
+
+RUN groupadd -r appuser && useradd -r -g appuser -d /app appuser \
+    && chown -R appuser:appuser /app
+
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
+
+ENTRYPOINT ["dotnet", "{{ name }}.Webhook.dll"]

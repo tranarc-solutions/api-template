@@ -1,0 +1,68 @@
+using Core.Persistence.Context;
+using Microsoft.EntityFrameworkCore;
+using Serilog;
+
+namespace Core.Persistence.Initialization;
+
+public class ApplicationDbInitializer
+{
+    private readonly ApplicationDbContext _context;
+    private readonly ApplicationDbSeeder _seeder;
+
+    public ApplicationDbInitializer(ApplicationDbContext context, ApplicationDbSeeder seeder)
+    {
+        _context = context;
+        _seeder = seeder;
+    }
+
+    public async Task RunAsync(CancellationToken cancellationToken = default)
+    {
+        if (_context.Database.GetPendingMigrations().Any())
+        {
+            Log.Information("Applying pending migrations...");
+            await _context.Database.MigrateAsync(cancellationToken);
+        }
+
+        await _seeder.SeedAsync(cancellationToken);
+    }
+}
+
+public class ApplicationDbSeeder
+{
+    private readonly CustomSeederRunner _seederRunner;
+
+    public ApplicationDbSeeder(CustomSeederRunner seederRunner)
+    {
+        _seederRunner = seederRunner;
+    }
+
+    public async Task SeedAsync(CancellationToken cancellationToken = default)
+    {
+        await _seederRunner.RunSeedersAsync(cancellationToken);
+    }
+}
+
+public interface ICustomSeeder
+{
+    int Order { get; }
+    Task SeedAsync(CancellationToken cancellationToken = default);
+}
+
+public class CustomSeederRunner
+{
+    private readonly IEnumerable<ICustomSeeder> _seeders;
+
+    public CustomSeederRunner(IEnumerable<ICustomSeeder> seeders)
+    {
+        _seeders = seeders;
+    }
+
+    public async Task RunSeedersAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (var seeder in _seeders.OrderBy(s => s.Order))
+        {
+            Log.Information("Running seeder: {SeederName}", seeder.GetType().Name);
+            await seeder.SeedAsync(cancellationToken);
+        }
+    }
+}

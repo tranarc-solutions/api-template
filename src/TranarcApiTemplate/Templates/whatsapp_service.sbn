@@ -1,0 +1,83 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Shared.Contracts.Interfaces;
+
+namespace Core.WhatsApp;
+
+public class WhatsAppSettings
+{
+    public bool Enabled { get; set; }
+    public string PhoneNumberId { get; set; } = "";
+    public string AccessToken { get; set; } = "";
+    public string WebhookVerifyToken { get; set; } = "";
+    public Dictionary<string, string> Templates { get; set; } = new();
+}
+
+public interface IWhatsAppService : IScopedService
+{
+    Task<bool> SendTemplateMessageAsync(string phoneNumber, string templateName, string[] parameters, CancellationToken ct = default);
+    Task<bool> SendTextMessageAsync(string phoneNumber, string text, CancellationToken ct = default);
+}
+
+public class WhatsAppService : IWhatsAppService
+{
+    private readonly HttpClient _httpClient;
+    private readonly WhatsAppSettings _settings;
+    private readonly ILogger<WhatsAppService> _logger;
+    private readonly bool _isEnabled;
+
+    public WhatsAppService(IHttpClientFactory httpClientFactory, IConfiguration config, ILogger<WhatsAppService> logger)
+    {
+        _httpClient = httpClientFactory.CreateClient("WhatsApp");
+        _settings = config.GetSection(nameof(WhatsAppSettings)).Get<WhatsAppSettings>() ?? new();
+        _logger = logger;
+        _isEnabled = _settings.Enabled && !string.IsNullOrEmpty(_settings.AccessToken);
+    }
+
+    public async Task<bool> SendTemplateMessageAsync(string phoneNumber, string templateName, string[] parameters, CancellationToken ct = default)
+    {
+        if (!_isEnabled)
+        {
+            _logger.LogDebug("WhatsApp disabled, skipping template message to {Phone}", SanitizePhone(phoneNumber));
+            return false;
+        }
+
+        _logger.LogInformation("Sending WhatsApp template {Template} to {Phone}", templateName, SanitizePhone(phoneNumber));
+
+        // TODO: Implement WhatsApp Cloud API call
+        // POST https://graph.facebook.com/v18.0/{PhoneNumberId}/messages
+        await Task.CompletedTask;
+
+        return true;
+    }
+
+    public async Task<bool> SendTextMessageAsync(string phoneNumber, string text, CancellationToken ct = default)
+    {
+        if (!_isEnabled)
+        {
+            _logger.LogDebug("WhatsApp disabled, skipping text message to {Phone}", SanitizePhone(phoneNumber));
+            return false;
+        }
+
+        _logger.LogInformation("Sending WhatsApp text to {Phone}", SanitizePhone(phoneNumber));
+
+        // TODO: Implement WhatsApp Cloud API text message
+        await Task.CompletedTask;
+
+        return true;
+    }
+
+    private static string SanitizePhone(string phone)
+        => phone.Length > 4 ? $"***{phone[^4..]}" : "****";
+}
+
+public static class WhatsAppStartup
+{
+    public static IServiceCollection AddWhatsApp(this IServiceCollection services, IConfiguration config)
+    {
+        services.Configure<WhatsAppSettings>(config.GetSection(nameof(WhatsAppSettings)));
+        services.AddHttpClient("WhatsApp");
+        return services;
+    }
+}

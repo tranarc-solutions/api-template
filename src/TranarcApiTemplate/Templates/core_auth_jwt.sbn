@@ -1,0 +1,35 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
+
+namespace Core.Auth.Jwt;
+
+public static class Startup
+{
+    internal const string MobileScheme = "MobileJwt";
+
+    public static AuthenticationBuilder AddJwtAuth(this AuthenticationBuilder builder, IConfiguration config)
+    {
+        var jwtSecret = config["SecuritySettings:JwtSecret"] ?? "CHANGE-THIS-TO-A-STRONG-SECRET-KEY-AT-LEAST-32-CHARS";
+        var key = Encoding.UTF8.GetBytes(jwtSecret);
+
+        builder.AddJwtBearer(MobileScheme, options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidateIssuer = false,
+                ValidateAudience = true,
+                ValidAudiences = ["gate", "expenditure", "mobile"],
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.FromMinutes(5)
+            };
+        });
+
+        return builder;
+    }
+}

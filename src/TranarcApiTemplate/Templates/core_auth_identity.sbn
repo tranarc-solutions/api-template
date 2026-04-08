@@ -1,0 +1,34 @@
+using Core.Persistence.Context;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.Auth.Identity;
+
+public class ApplicationUser : IdentityUser
+{
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+    public string? DefaultCompanyId { get; set; }
+    public string? AccountId { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public static class IdentityStartup
+{
+    public static IServiceCollection AddIdentity(this IServiceCollection services)
+    {
+        services.AddIdentityCore<ApplicationUser>(options =>
+            {
+                options.Password.RequireDigit = true;
+                options.Password.RequiredLength = 8;
+                options.Password.RequireNonAlphanumeric = true;
+                options.Password.RequireUppercase = true;
+                options.User.RequireUniqueEmail = true;
+            })
+            .AddRoles<IdentityRole>()
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
+
+        return services;
+    }
+}

@@ -1,0 +1,23 @@
+using System.Net;
+
+namespace Core.Common.Extensions;
+
+public static class ErrorOrExtensions
+{
+    public static HttpStatusCode ErrorTypeToStatusCode<TResponse>(this ErrorOr<TResponse> response)
+    {
+        return response.Errors.First().Type switch
+        {
+            ErrorType.Validation => HttpStatusCode.BadRequest,
+            ErrorType.NotFound => HttpStatusCode.NotFound,
+            ErrorType.Conflict => HttpStatusCode.Conflict,
+            ErrorType.Forbidden => HttpStatusCode.Forbidden,
+            ErrorType.Unauthorized => HttpStatusCode.Unauthorized,
+            ErrorType.Failure => HttpStatusCode.BadRequest,
+            _ => HttpStatusCode.InternalServerError
+        };
+    }
+
+    public static string ErrorsSummary<T>(this ErrorOr<T> result)
+        => string.Join(", ", result.Errors.Select(e => e.Description));
+}

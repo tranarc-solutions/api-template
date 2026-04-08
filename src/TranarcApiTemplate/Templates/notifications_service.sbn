@@ -1,0 +1,60 @@
+using Shared.Contracts.Interfaces;
+
+namespace Core.Notifications;
+
+public enum NotificationChannel { Email, Sms, WhatsApp }
+
+public interface IAlertSendingService : IScopedService
+{
+    Task SendAsync(AlertRequest request, CancellationToken ct = default);
+}
+
+public class AlertRequest
+{
+    public required string Recipient { get; init; }
+    public required string Subject { get; init; }
+    public required string Body { get; init; }
+    public NotificationChannel Channel { get; init; } = NotificationChannel.Email;
+    public string? DeduplicationKey { get; init; }
+    public bool RespectQuietHours { get; init; } = true;
+}
+
+public class AlertSendingService : IAlertSendingService
+{
+    private static readonly HashSet<string> _sentKeys = new();
+    private static readonly TimeSpan QuietStart = TimeSpan.FromHours(22); // 10 PM
+    private static readonly TimeSpan QuietEnd = TimeSpan.FromHours(7);   // 7 AM
+
+    public async Task SendAsync(AlertRequest request, CancellationToken ct = default)
+    {
+        // Deduplication
+        if (!string.IsNullOrEmpty(request.DeduplicationKey) && !_sentKeys.Add(request.DeduplicationKey))
+            return;
+
+        // Quiet hours check (skip SMS/WhatsApp during quiet hours)
+        if (request.RespectQuietHours && request.Channel != NotificationChannel.Email)
+        {
+            var now = DateTime.UtcNow.TimeOfDay;
+            if (now >= QuietStart || now < QuietEnd)
+                return;
+        }
+
+        // Route to appropriate channel
+        switch (request.Channel)
+        {
+            case NotificationChannel.Email:
+                // TODO: Inject and call your email service
+                break;
+            case NotificationChannel.Sms:
+                // TODO: Inject and call your SMS service
+                // Fallback to email on failure
+                break;
+            case NotificationChannel.WhatsApp:
+                // TODO: Inject and call your WhatsApp service
+                // Fallback to SMS on failure
+                break;
+        }
+
+        await Task.CompletedTask;
+    }
+}

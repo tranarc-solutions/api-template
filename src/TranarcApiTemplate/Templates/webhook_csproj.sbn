@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="ErrorOr" />
+    <Using Include="FastEndpoints" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FastEndpoints.Swagger" Version="8.1.0" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.13.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Core/Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\Configurations\*.json" CopyToOutputDirectory="PreserveNewest" Link="Configurations\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

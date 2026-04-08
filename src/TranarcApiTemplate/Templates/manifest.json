@@ -1,0 +1,459 @@
+{
+  "Files": [
+    {
+      "ResourceName": "host_program.sbn",
+      "OutputPath": "{Name}.Host/Program.cs",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "host_csproj.sbn",
+      "OutputPath": "{Name}.Host/{Name}.Host.csproj",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "host_appsettings.json.sbn",
+      "OutputPath": "{Name}.Host/appsettings.json",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "host_sample_endpoint.sbn",
+      "OutputPath": "{Name}.Host/Features/Health/PingEndpoint.cs",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "core_startup.sbn",
+      "OutputPath": "Core/Startup.cs",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "core_csproj.sbn",
+      "OutputPath": "Core/Core.csproj",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "core_custom_endpoint.sbn",
+      "OutputPath": "Core/Common/Endpoints/CustomEndpoint.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_custom_endpoint_no_request.sbn",
+      "OutputPath": "Core/Common/Endpoints/CustomEndpointWithoutRequest.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_custom_endpoint_no_response.sbn",
+      "OutputPath": "Core/Common/Endpoints/CustomEndpointWithoutResponse.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_custom_endpoint_no_req_res.sbn",
+      "OutputPath": "Core/Common/Endpoints/CustomEndpointWithoutRequestAndResponse.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_erroror_extensions.sbn",
+      "OutputPath": "Core/Common/Extensions/ErrorOrExtensions.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_service_lifetime.sbn",
+      "OutputPath": "Core/Common/Extensions/ServiceLifeTimeExtensions.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_helpers.sbn",
+      "OutputPath": "Core/Common/Helpers/IpAddressHelper.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_claims_extensions.sbn",
+      "OutputPath": "Core/Common/Extensions/ClaimsPrincipalExtensions.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_common_startup.sbn",
+      "OutputPath": "Core/Common/Startup.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_serilog.sbn",
+      "OutputPath": "Core/Logging/SerilogConfigurator.cs",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "core_security_startup.sbn",
+      "OutputPath": "Core/Security/Startup.cs",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "core_monitoring_startup.sbn",
+      "OutputPath": "Core/Monitoring/Startup.cs",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "core_caching.sbn",
+      "OutputPath": "Core/Caching/Startup.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_helper_services.sbn",
+      "OutputPath": "Core/Common/Helpers/Startup.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_dbcontext_helper.sbn",
+      "OutputPath": "Core/Common/Helpers/DbContextHelper.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_cors_startup.sbn",
+      "OutputPath": "Core/Cors/Startup.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_ratelimiting_startup.sbn",
+      "OutputPath": "Core/RateLimiting/Startup.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_persistence_startup.sbn",
+      "OutputPath": "Core/Persistence/Startup.cs",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "core_persistence_dbcontext.sbn",
+      "OutputPath": "Core/Persistence/Context/ApplicationDbContext.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_persistence_auditable.sbn",
+      "OutputPath": "Core/Persistence/Models/AuditableEntity.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_persistence_repository.sbn",
+      "OutputPath": "Core/Persistence/Repository/ApplicationRepository.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_persistence_initializer.sbn",
+      "OutputPath": "Core/Persistence/Initialization/ApplicationDbInitializer.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_auth_startup.sbn",
+      "OutputPath": "Core/Auth/Startup.cs",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "core_auth_current_user.sbn",
+      "OutputPath": "Core/Auth/Identity/CurrentUser.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_auth_identity.sbn",
+      "OutputPath": "Core/Auth/Identity/ApplicationUser.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_auth_permissions.sbn",
+      "OutputPath": "Core/Auth/Authorization/Permissions.cs",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "core_auth_permission_cache.sbn",
+      "OutputPath": "Core/Auth/PermissionCacheService.cs",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "core_auth_cookies.sbn",
+      "OutputPath": "Core/Auth/Cookies/Startup.cs",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "core_auth_jwt.sbn",
+      "OutputPath": "Core/Auth/Jwt/Startup.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_middlewares.sbn",
+      "OutputPath": "Core/Middlewares/Middlewares.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "core_configs_startup.sbn",
+      "OutputPath": "Core/Configs/Startup.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "shared_csproj.sbn",
+      "OutputPath": "Shared/Shared.csproj",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "shared_scoped_service.sbn",
+      "OutputPath": "Shared/Contracts/Interfaces/IScopedService.cs",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "sourcegen_csproj.sbn",
+      "OutputPath": "{Name}.SourceGenerator/{Name}.SourceGenerator.csproj",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "sourcegen_permissions.sbn",
+      "OutputPath": "{Name}.SourceGenerator/PermissionsGenerator.cs",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "test_unit_csproj.sbn",
+      "OutputPath": "Tests/{Name}.Tests.Unit/{Name}.Tests.Unit.csproj",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "test_unit_sample.sbn",
+      "OutputPath": "Tests/{Name}.Tests.Unit/SampleTest.cs",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "test_integration_csproj.sbn",
+      "OutputPath": "Tests/{Name}.Tests.Integration/{Name}.Tests.Integration.csproj",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "test_integration_appsettings.json.sbn",
+      "OutputPath": "Tests/{Name}.Tests.Integration/appsettings.json",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "test_integration_factory.sbn",
+      "OutputPath": "Tests/{Name}.Tests.Integration/IntegrationTestFactory.cs",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "config_cors.json.sbn",
+      "OutputPath": "Configurations/cors.json",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "config_database.json.sbn",
+      "OutputPath": "Configurations/database.json",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "config_database_dev.json.sbn",
+      "OutputPath": "Configurations/database.Development.json",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "config_security.json.sbn",
+      "OutputPath": "Configurations/security.json",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "config_securityheaders.json.sbn",
+      "OutputPath": "Configurations/securityheaders.json",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "config_logger.json.sbn",
+      "OutputPath": "Configurations/logger.json",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "config_scalar.json.sbn",
+      "OutputPath": "Configurations/scalar.json",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "config_middleware.json.sbn",
+      "OutputPath": "Configurations/middleware.json",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "config_cache.json.sbn",
+      "OutputPath": "Configurations/cache.json",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "config_resilience.json.sbn",
+      "OutputPath": "Configurations/resilience.json",
+      "IsTemplate": false
+    },
+    {
+      "ResourceName": "config_site_settings.json.sbn",
+      "OutputPath": "Configurations/site-settings.json",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "config_site_settings_dev.json.sbn",
+      "OutputPath": "Configurations/site-settings.Development.json",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "config_security_dev.json.sbn",
+      "OutputPath": "Configurations/security.Development.json",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "dockerfile_host.sbn",
+      "OutputPath": "{Name}.Host/Dockerfile",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "github_deploy.yml.sbn",
+      "OutputPath": ".github/workflows/deploy.yml",
+      "IsTemplate": true
+    },
+    {
+      "ResourceName": "claude_md.sbn",
+      "OutputPath": "CLAUDE.md",
+      "IsTemplate": true
+    },
+
+    {
+      "ResourceName": "host_message_broker.sbn",
+      "OutputPath": "{Name}.Host/MessageBrokerStartup.cs",
+      "IsTemplate": true,
+      "RequiresModule": "consumer"
+    },
+    {
+      "ResourceName": "consumer_program.sbn",
+      "OutputPath": "{Name}.Consumer/Program.cs",
+      "IsTemplate": true,
+      "RequiresModule": "consumer"
+    },
+    {
+      "ResourceName": "consumer_csproj.sbn",
+      "OutputPath": "{Name}.Consumer/{Name}.Consumer.csproj",
+      "IsTemplate": true,
+      "RequiresModule": "consumer"
+    },
+    {
+      "ResourceName": "consumer_startup.sbn",
+      "OutputPath": "{Name}.Consumer/Startup.cs",
+      "IsTemplate": true,
+      "RequiresModule": "consumer"
+    },
+    {
+      "ResourceName": "consumer_sample.sbn",
+      "OutputPath": "{Name}.Consumer/Consumers/SampleConsumer.cs",
+      "IsTemplate": true,
+      "RequiresModule": "consumer"
+    },
+    {
+      "ResourceName": "consumer_dockerfile.sbn",
+      "OutputPath": "{Name}.Consumer/Dockerfile",
+      "IsTemplate": true,
+      "RequiresModule": "consumer"
+    },
+    {
+      "ResourceName": "config_message_broker.json.sbn",
+      "OutputPath": "Configurations/message-broker.json",
+      "IsTemplate": true,
+      "RequiresModule": "consumer"
+    },
+    {
+      "ResourceName": "config_message_broker_dev.json.sbn",
+      "OutputPath": "Configurations/message-broker.Development.json",
+      "IsTemplate": false,
+      "RequiresModule": "consumer"
+    },
+
+    {
+      "ResourceName": "webhook_program.sbn",
+      "OutputPath": "{Name}.Webhook/Program.cs",
+      "IsTemplate": true,
+      "RequiresModule": "webhook"
+    },
+    {
+      "ResourceName": "webhook_csproj.sbn",
+      "OutputPath": "{Name}.Webhook/{Name}.Webhook.csproj",
+      "IsTemplate": true,
+      "RequiresModule": "webhook"
+    },
+    {
+      "ResourceName": "webhook_hmac.sbn",
+      "OutputPath": "{Name}.Webhook/Security/HmacSecurityPreprocessor.cs",
+      "IsTemplate": true,
+      "RequiresModule": "webhook"
+    },
+    {
+      "ResourceName": "webhook_sample.sbn",
+      "OutputPath": "{Name}.Webhook/Endpoints/SampleWebhookEndpoint.cs",
+      "IsTemplate": true,
+      "RequiresModule": "webhook"
+    },
+    {
+      "ResourceName": "webhook_dockerfile.sbn",
+      "OutputPath": "{Name}.Webhook/Dockerfile",
+      "IsTemplate": true,
+      "RequiresModule": "webhook"
+    },
+
+    {
+      "ResourceName": "hangfire_startup.sbn",
+      "OutputPath": "Core/Hangfire/Startup.cs",
+      "IsTemplate": false,
+      "RequiresModule": "hangfire"
+    },
+    {
+      "ResourceName": "hangfire_jobbase.sbn",
+      "OutputPath": "Core/Hangfire/Jobs/HangfireJobBase.cs",
+      "IsTemplate": false,
+      "RequiresModule": "hangfire"
+    },
+    {
+      "ResourceName": "hangfire_dashboard_auth.sbn",
+      "OutputPath": "Core/Hangfire/HangfireDashboardAuthFilter.cs",
+      "IsTemplate": false,
+      "RequiresModule": "hangfire"
+    },
+    {
+      "ResourceName": "hangfire_sample_job.sbn",
+      "OutputPath": "Core/Hangfire/Jobs/SampleCleanupJob.cs",
+      "IsTemplate": false,
+      "RequiresModule": "hangfire"
+    },
+
+    {
+      "ResourceName": "slack_service.sbn",
+      "OutputPath": "Core/Notifications/Slack/SlackService.cs",
+      "IsTemplate": false,
+      "RequiresModule": "slack"
+    },
+    {
+      "ResourceName": "config_slack.json.sbn",
+      "OutputPath": "Configurations/slack.json",
+      "IsTemplate": false,
+      "RequiresModule": "slack"
+    },
+
+    {
+      "ResourceName": "notifications_service.sbn",
+      "OutputPath": "Core/Notifications/AlertSendingService.cs",
+      "IsTemplate": false,
+      "RequiresModule": "notifications"
+    },
+
+    {
+      "ResourceName": "whatsapp_service.sbn",
+      "OutputPath": "Core/WhatsApp/WhatsAppService.cs",
+      "IsTemplate": false,
+      "RequiresModule": "whatsapp"
+    },
+    {
+      "ResourceName": "config_whatsapp.json.sbn",
+      "OutputPath": "Configurations/whatsapp.json",
+      "IsTemplate": false,
+      "RequiresModule": "whatsapp"
+    },
+
+    {
+      "ResourceName": "payment_gateway.sbn",
+      "OutputPath": "Core/PaymentGateway/PaymentGateway.cs",
+      "IsTemplate": false,
+      "RequiresModule": "payment-gateway"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace Core.Hangfire.Jobs;
+
+public abstract class HangfireJobBase(
+    IServiceScopeFactory scopeFactory,
+    ILogger logger)
+{
+    protected readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+    protected readonly ILogger _logger = logger;
+
+    protected abstract string JobName { get; }
+
+    protected async Task ExecuteWithTrackingAsync(Func<CancellationToken, Task> action, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Starting job: {JobName}", JobName);
+        var startTime = DateTimeOffset.UtcNow;
+
+        try
+        {
+            await action(cancellationToken);
+            var duration = DateTimeOffset.UtcNow - startTime;
+            _logger.LogInformation("Job {JobName} completed in {Duration:F1}s", JobName, duration.TotalSeconds);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning("Job {JobName} was cancelled", JobName);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Job {JobName} failed after {Duration:F1}s",
+                JobName, (DateTimeOffset.UtcNow - startTime).TotalSeconds);
+            throw;
+        }
+    }
+}

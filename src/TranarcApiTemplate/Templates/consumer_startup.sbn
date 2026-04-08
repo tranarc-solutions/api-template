@@ -1,0 +1,73 @@
+using MassTransit;
+using {{ name }}.Consumer.Consumers;
+
+namespace {{ name }}.Consumer;
+
+internal static class Startup
+{
+    internal static IServiceCollection AddMessageBroker(this IServiceCollection services, IConfiguration configuration,
+        IHostEnvironment environment)
+    {
+        var queuePrefix = configuration["ServiceBusSettings:QueuePrefix"] ?? "{{ name_lower }}";
+
+        services.AddMassTransit(options =>
+        {
+            options.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter(queuePrefix, false));
+
+            // Register your consumers here:
+            options.AddConsumer<SampleConsumer>();
+
+            if (environment.IsDevelopment())
+            {
+                var rabbitHost = configuration["RabbitMqSettings:Host"];
+                if (string.IsNullOrWhiteSpace(rabbitHost))
+                {
+                    // No RabbitMQ configured — use in-memory
+                    options.UsingInMemory((context, configurator) => { configurator.ConfigureEndpoints(context); });
+                }
+                else
+                {
+                    options.UsingRabbitMq((context, configurator) =>
+                    {
+                        configurator.Host(rabbitHost, configuration["RabbitMqSettings:VirtualHost"], h =>
+                        {
+                            h.Username(configuration["RabbitMqSettings:Username"] ?? "guest");
+                            h.Password(configuration["RabbitMqSettings:Password"] ?? "guest");
+                        });
+
+                        configurator.UseMessageRetry(r => r.Intervals(
+                            TimeSpan.FromSeconds(5),
+                            TimeSpan.FromSeconds(15),
+                            TimeSpan.FromSeconds(30)));
+
+                        configurator.ConfigureEndpoints(context);
+                    });
+                }
+            }
+            else
+            {
+                options.UsingAzureServiceBus((context, configurator) =>
+                {
+                    var connectionString = configuration["ServiceBusConnectionString"];
+                    ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+
+                    configurator.Host(connectionString);
+
+                    configurator.UseMessageRetry(r => r.Intervals(
+                        TimeSpan.FromSeconds(5),
+                        TimeSpan.FromSeconds(15),
+                        TimeSpan.FromSeconds(30)));
+
+                    configurator.UseDelayedRedelivery(r => r.Intervals(
+                        TimeSpan.FromMinutes(1),
+                        TimeSpan.FromMinutes(5),
+                        TimeSpan.FromMinutes(15)));
+
+                    configurator.ConfigureEndpoints(context);
+                });
+            }
+        });
+
+        return services;
+    }
+}

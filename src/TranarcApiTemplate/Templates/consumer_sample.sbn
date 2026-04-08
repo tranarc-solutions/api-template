@@ -1,0 +1,20 @@
+using MassTransit;
+using Serilog;
+
+namespace {{ name }}.Consumer.Consumers;
+
+// Sample command — define your own in Shared/Contracts/Commands/
+public record SampleCommand(Guid Id, string Message);
+
+public class SampleConsumer : IConsumer<SampleCommand>
+{
+    public Task Consume(ConsumeContext<SampleCommand> context)
+    {
+        Log.Information("Received SampleCommand: {Id} - {Message}",
+            context.Message.Id, context.Message.Message);
+
+        // Process the command here
+
+        return Task.CompletedTask;
+    }
+}

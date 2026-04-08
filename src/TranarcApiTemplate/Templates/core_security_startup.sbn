@@ -1,0 +1,142 @@
+using Azure.Extensions.AspNetCore.Configuration.Secrets;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Serilog;
+
+namespace Core.Security;
+
+public static class Startup
+{
+    public static IApplicationBuilder UseSecurityHeaders(this IApplicationBuilder app, IConfiguration config,
+        bool isDevelopment = false)
+    {
+        var settings = config.GetSection(nameof(SecurityHeaderSettings)).Get<SecurityHeaderSettings>();
+
+        if (!isDevelopment && settings?.AllowedHosts is { Length: > 0 })
+        {
+            var allowedHosts = new HashSet<string>(settings.AllowedHosts, StringComparer.OrdinalIgnoreCase);
+
+            app.Use(async (context, next) =>
+            {
+                if (context.Request.Path.StartsWithSegments("/api/health") ||
+                    context.Request.Path.StartsWithSegments("/api/webhooks"))
+                {
+                    await next();
+                    return;
+                }
+
+                var host = context.Request.Host.Host;
+                if (!allowedHosts.Contains(host))
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteAsync("Invalid host header");
+                    return;
+                }
+
+                await next();
+            });
+        }
+
+        if (settings?.Enable is true)
+            app.Use(async (context, next) =>
+            {
+                if (!string.IsNullOrWhiteSpace(settings.XFrameOptions))
+                    context.Response.Headers.Append("X-Frame-Options", settings.XFrameOptions);
+                if (!string.IsNullOrWhiteSpace(settings.XContentTypeOptions))
+                    context.Response.Headers.Append("X-Content-Type-Options", settings.XContentTypeOptions);
+                if (!string.IsNullOrWhiteSpace(settings.ReferrerPolicy))
+                    context.Response.Headers.Append("Referrer-Policy", settings.ReferrerPolicy);
+                if (!string.IsNullOrWhiteSpace(settings.XXSSProtection))
+                    context.Response.Headers.Append("X-XSS-Protection", settings.XXSSProtection);
+                if (!string.IsNullOrWhiteSpace(settings.StrictTransportSecurity))
+                    context.Response.Headers.Append("Strict-Transport-Security", settings.StrictTransportSecurity);
+
+                await next();
+            });
+
+        app.UseForwardedHeaders(new ForwardedHeadersOptions
+        {
+            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+        });
+
+        return app;
+    }
+
+    public static IServiceCollection AddDataProtection(
+        this IServiceCollection services, WebApplicationBuilder builder)
+    {
+        if (builder.Environment.IsDevelopment())
+        {
+            services.AddDataProtection()
+                .PersistKeysToFileSystem(new DirectoryInfo("./dataprotection"));
+            Log.Information("Data Protection configured with local file system storage (Development)");
+        }
+        else
+        {
+            var keyVaultName = builder.Configuration["SecuritySettings:KeyVaultName"];
+            if (!string.IsNullOrEmpty(keyVaultName))
+            {
+                var keyVaultUri = new Uri($"https://{keyVaultName}.vault.azure.net/");
+                services.AddDataProtection()
+                    .PersistKeysToAzureBlobStorage(
+                        builder.Configuration["AzureStorageSettings:ConnectionString"]!,
+                        "dataprotection", "keys.xml")
+                    .ProtectKeysWithAzureKeyVault(keyVaultUri, new DefaultAzureCredential())
+                    .SetApplicationName("{{ name }}");
+                Log.Information("Data Protection configured with Azure Key Vault + Blob Storage");
+            }
+            else
+            {
+                services.AddDataProtection()
+                    .SetApplicationName("{{ name }}");
+                Log.Warning("Data Protection using in-memory keys");
+            }
+        }
+
+        return services;
+    }
+
+    public static IServiceCollection AddAzureKeyVaultStorage(
+        this IServiceCollection services, WebApplicationBuilder builder)
+    {
+        var keyVaultName = builder.Configuration["SecuritySettings:KeyVaultName"];
+        if (builder.Environment.IsDevelopment() || string.IsNullOrEmpty(keyVaultName))
+            return services;
+
+        if (builder.Configuration["KeyVaultLoaded"] == "true")
+            return services;
+
+        try
+        {
+            var secretClient = new SecretClient(
+                new Uri($"https://{keyVaultName}.vault.azure.net/"),
+                new DefaultAzureCredential());
+            builder.Configuration.AddAzureKeyVault(secretClient, new KeyVaultSecretManager()).AddEnvironmentVariables();
+            Log.Information("Successfully connected to Key Vault: {KeyVaultName}", keyVaultName);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to connect to Key Vault '{KeyVaultName}'", keyVaultName);
+        }
+
+        return services;
+    }
+}
+
+public class SecurityHeaderSettings
+{
+    public bool Enable { get; set; }
+    public string? XFrameOptions { get; set; }
+    public string? XContentTypeOptions { get; set; }
+    public string? ReferrerPolicy { get; set; }
+    public string? XXSSProtection { get; set; }
+    public string? StrictTransportSecurity { get; set; }
+    public string[]? AllowedHosts { get; set; }
+}

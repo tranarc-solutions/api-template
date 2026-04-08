@@ -1,0 +1,16 @@
+{
+  "logConfig": {
+    "HttpRequestLogging": true,
+    "HttpRequestLogLevel": "Information"
+  },
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Microsoft": "Warning",
+        "System": "Warning",
+        "Microsoft.EntityFrameworkCore": "Warning"
+      }
+    }
+  }
+}

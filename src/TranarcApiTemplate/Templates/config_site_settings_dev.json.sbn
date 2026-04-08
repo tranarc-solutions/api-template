@@ -1,0 +1,6 @@
+{
+  "SiteSettings": {
+    "SiteName": "{{ name }} (Dev)",
+    "SiteUrl": "http://localhost:5000"
+  }
+}

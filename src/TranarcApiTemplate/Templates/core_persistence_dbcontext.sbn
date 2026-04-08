@@ -1,0 +1,52 @@
+using Core.Auth.Identity;
+using Core.Persistence.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+
+namespace Core.Persistence.Context;
+
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+{
+    private readonly ICurrentUser? _currentUser;
+
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ICurrentUser? currentUser = null)
+        : base(options)
+    {
+        _currentUser = currentUser;
+    }
+
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+
+        // Apply all IEntityTypeConfiguration<T> from this assembly
+        builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        var userId = _currentUser?.GetUserId() ?? "system";
+
+        foreach (var entry in ChangeTracker.Entries<AuditableEntity>())
+        {
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    entry.Entity.CreatedBy = userId;
+                    entry.Entity.CreatedOn = DateTime.UtcNow;
+                    break;
+                case EntityState.Modified:
+                    entry.Entity.LastModifiedBy = userId;
+                    entry.Entity.LastModifiedOn = DateTime.UtcNow;
+                    break;
+                case EntityState.Deleted:
+                    entry.State = EntityState.Modified;
+                    entry.Entity.DeletedOn = DateTime.UtcNow;
+                    entry.Entity.DeletedBy = userId;
+                    break;
+            }
+        }
+
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+}

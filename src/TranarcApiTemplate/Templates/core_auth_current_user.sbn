@@ -1,0 +1,49 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+
+namespace Core.Auth.Identity;
+
+public interface ICurrentUser
+{
+    string? GetUserId();
+    string? GetDefaultCompanyId();
+    string? GetAccountId();
+    string? GetEmail();
+    bool IsAuthenticated();
+    ClaimsPrincipal? GetUser();
+}
+
+public interface ICurrentUserInitializer
+{
+    void SetCurrentUser(ClaimsPrincipal user);
+}
+
+public class CurrentUser : ICurrentUser, ICurrentUserInitializer
+{
+    private ClaimsPrincipal? _user;
+
+    public void SetCurrentUser(ClaimsPrincipal user) => _user = user;
+
+    public string? GetUserId() => _user?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    public string? GetDefaultCompanyId() => _user?.FindFirst("company_id")?.Value;
+    public string? GetAccountId() => _user?.FindFirst("account_id")?.Value;
+    public string? GetEmail() => _user?.FindFirst(ClaimTypes.Email)?.Value;
+    public bool IsAuthenticated() => _user?.Identity?.IsAuthenticated == true;
+    public ClaimsPrincipal? GetUser() => _user;
+}
+
+public class CurrentUserMiddleware : IMiddleware
+{
+    private readonly ICurrentUserInitializer _initializer;
+
+    public CurrentUserMiddleware(ICurrentUserInitializer initializer)
+    {
+        _initializer = initializer;
+    }
+
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    {
+        _initializer.SetCurrentUser(context.User);
+        await next(context);
+    }
+}

@@ -1,0 +1,52 @@
+using Xunit;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Testcontainers.PostgreSql;
+using Core.Persistence.Context;
+
+namespace {{ name }}.Tests.Integration;
+
+public class IntegrationTestFactory : WebApplicationFactory<{{ name }}.Host.Program>, IAsyncLifetime
+{
+    private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder("postgres:16-alpine")
+        .WithDatabase("{{ name_lower }}_test")
+        .WithUsername("test")
+        .WithPassword("test")
+        .Build();
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseEnvironment("Testing");
+
+        builder.ConfigureServices(services =>
+        {
+            // Remove the existing DbContext registration
+            var descriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
+            if (descriptor != null) services.Remove(descriptor);
+
+            // Remove the DbContextFactory registration
+            var factoryDescriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(IDbContextFactory<ApplicationDbContext>));
+            if (factoryDescriptor != null) services.Remove(factoryDescriptor);
+
+            // Add test database
+            services.AddDbContext<ApplicationDbContext>(options =>
+            {
+                options.UseNpgsql(_dbContainer.GetConnectionString());
+            });
+        });
+    }
+
+    public async Task InitializeAsync()
+    {
+        await _dbContainer.StartAsync();
+    }
+
+    public new async Task DisposeAsync()
+    {
+        await _dbContainer.DisposeAsync();
+    }
+}

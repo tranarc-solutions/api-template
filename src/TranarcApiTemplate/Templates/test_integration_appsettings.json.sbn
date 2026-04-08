@@ -1,0 +1,16 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Warning"
+    }
+  },
+  "DatabaseSettings": {
+    "ConnectionString": "will-be-overridden-by-testcontainers"
+  },
+  "CorsOrigins": "http://localhost:3000",
+  "CorsMethods": "GET;POST;PUT;PATCH;DELETE;OPTIONS",
+  "CorsHeaders": "Content-Type;Authorization",
+  "SecuritySettings": {
+    "JwtSecret": "test-secret-key-that-is-at-least-32-characters-long"
+  }
+}

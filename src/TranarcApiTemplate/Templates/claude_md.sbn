@@ -1,0 +1,33 @@
+# {{ name }} API
+
+## Architecture
+- ASP.NET Core + FastEndpoints (not controllers)
+- PostgreSQL + EF Core
+- ErrorOr for error handling
+- IScopedService auto-registration
+
+## Project Structure
+- `{{ name }}.Host/` — API host
+- `Core/` — business logic, auth, persistence
+- `Shared/` — DTOs, contracts, enums
+- `{{ name }}.SourceGenerator/` — permissions generator
+- `Tests/` — unit + integration tests
+
+## Patterns
+- Endpoints in `{{ name }}.Host/Features/{Feature}/`
+- Services implement `IScopedService` for auto-DI
+- Methods return `ErrorOr<T>`
+- Use `IApplicationRepository<T>` for data access
+- Validators use `FluentValidation` in `Core/Common/Requests/`
+
+## Build & Test
+```bash
+dotnet build
+dotnet test
+dotnet run --project {{ name }}.Host
+```
+
+## Migrations
+```bash
+dotnet ef migrations add {Name} --project {{ name }}.Host --context ApplicationDbContext
+```

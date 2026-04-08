@@ -1,0 +1,110 @@
+using Core.Auth;
+using Core.Auth.Identity;
+using Core.Caching;
+using Core.Common;
+using Core.Common.Extensions;
+using Core.Common.Helpers;
+using Core.Cors;
+using Core.Logging;
+using Core.Middlewares;
+using Core.Monitoring;
+using Core.Persistence;
+using Core.RateLimiting;
+using Core.Security;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Serilog;
+
+namespace Core;
+
+public static class Startup
+{
+    public static IServiceCollection AddHostCore(this IServiceCollection services, IConfiguration config,
+        WebApplicationBuilder builder)
+    {
+        return services
+            .AddAzureKeyVaultStorage(builder)
+            .AddCorsPolicy(config)
+            .AddAuth(config, builder.Environment)
+            .AddSerilog()
+            .AddCaching(config)
+            .AddHelperServices()
+            .AddPersistence(config)
+            .AddLifeTimeServices()
+            .AddDataProtection(builder)
+            .AddRateLimiting()
+            .AddInfrastructureMonitoring(builder.Environment)
+            .AddCommonServices(config);
+    }
+
+    public static IApplicationBuilder UseHostCore(this IApplicationBuilder app, IConfiguration config,
+        bool isDevelopment = false)
+    {
+        return app
+            .UseMiddleware<CorrelationIdMiddleware>()
+            .UseMiddleware<RequestResponseLoggingMiddleware>()
+            .UseCorsPolicy()
+            .UseRateLimiting()
+            .UseCustomExceptionHandler(useGenericReason: true)
+            .UseSecurityHeaders(config, isDevelopment)
+            .UseAuth()
+            .UseMiddleware<RequestIdentityMiddleware>()
+            .UseMiddleware<CsrfMiddleware>();
+    }
+{{~ if has_webhook ~}}
+
+    public static IServiceCollection AddWebhookCore(this IServiceCollection services, IConfiguration config,
+        WebApplicationBuilder builder)
+    {
+        return services
+            .AddAzureKeyVaultStorage(builder)
+            .AddCorsPolicy(config)
+            .AddCurrentUser()
+            .AddIdentity()
+            .AddSerilog()
+            .AddPersistence(config)
+            .AddLifeTimeServices()
+            .AddRateLimiting();
+    }
+
+    public static IApplicationBuilder UseWebhookCore(this IApplicationBuilder app,
+        IConfiguration? config = null, bool isDevelopment = false)
+    {
+        var builder = app
+            .UseMiddleware<CorrelationIdMiddleware>()
+            .UseMiddleware<RequestResponseLoggingMiddleware>()
+            .UseCorsPolicy()
+            .UseRateLimiting()
+            .UseCustomExceptionHandler(useGenericReason: true);
+
+        if (config is not null)
+            builder = builder.UseSecurityHeaders(config, isDevelopment);
+
+        return builder;
+    }
+{{~ end ~}}
+{{~ if has_consumer ~}}
+
+    public static IServiceCollection AddConsumerCore(this IServiceCollection services, IConfiguration config,
+        WebApplicationBuilder builder)
+    {
+        return services
+            .AddAzureKeyVaultStorage(builder)
+            .AddCurrentUser()
+            .AddIdentity()
+            .AddSerilog()
+            .AddPersistence(config)
+            .AddLifeTimeServices()
+            .AddInfrastructureMonitoring(builder.Environment);
+    }
+
+    public static IApplicationBuilder UseConsumerCore(this IApplicationBuilder app)
+    {
+        return app
+            .UseMiddleware<CorrelationIdMiddleware>()
+            .UseMiddleware<RequestResponseLoggingMiddleware>()
+            .UseCustomExceptionHandler(useGenericReason: true);
+    }
+{{~ end ~}}
+}

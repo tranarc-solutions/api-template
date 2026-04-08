@@ -1,0 +1,115 @@
+using System.Net;
+using System.Text.Json;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Shared.Contracts.Interfaces;
+
+namespace Core.Notifications.Slack;
+
+public static class SlackSeverityColor
+{
+    public const string InternalError = "#FF0000";
+    public const string Error = "#FF4500";
+    public const string Warning = "#FFD700";
+    public const string Success = "#36A64F";
+    public const string Info = "#439FE0";
+}
+
+public interface ISlackService : IScopedService
+{
+    Task SendInfrastructureAlert(string title, string message, CancellationToken ct, string color = SlackSeverityColor.Error);
+    Task SendBusinessEvent(string title, string message, CancellationToken ct, string color = SlackSeverityColor.Info);
+}
+
+public class SlackService : ISlackService
+{
+    private readonly HttpClient _httpClient;
+    private readonly string _environment;
+    private readonly string _serviceName;
+    private readonly bool _isEnabled;
+    private readonly string? _webhookUrl;
+
+    public SlackService(IHttpClientFactory httpClientFactory, IHostEnvironment hostEnvironment, IConfiguration configuration)
+    {
+        _httpClient = httpClientFactory.CreateClient("Slack");
+        _environment = hostEnvironment.EnvironmentName;
+        _serviceName = hostEnvironment.ApplicationName;
+        _webhookUrl = configuration["SlackUrlWithAccessToken"];
+        _isEnabled = !string.IsNullOrEmpty(_webhookUrl);
+    }
+
+    public async Task SendInfrastructureAlert(string title, string message, CancellationToken ct,
+        string color = SlackSeverityColor.Error)
+    {
+        if (!_isEnabled) return;
+
+        var emoji = color switch
+        {
+            SlackSeverityColor.InternalError => "🚨",
+            SlackSeverityColor.Error => "⚠️",
+            SlackSeverityColor.Warning => "⚡",
+            SlackSeverityColor.Success => "✅",
+            _ => "📢"
+        };
+
+        await SendAsync(new
+        {
+            attachments = new[]
+            {
+                new
+                {
+                    color,
+                    blocks = new object[]
+                    {
+                        new { type = "header", text = new { type = "plain_text", text = $"{emoji} {title}", emoji = true } },
+                        new { type = "context", elements = new object[]
+                        {
+                            new { type = "mrkdwn", text = $"*Env:* `{_environment}`" },
+                            new { type = "mrkdwn", text = $"*Service:* `{_serviceName}`" },
+                            new { type = "mrkdwn", text = $"🕐 {DateTimeOffset.UtcNow:HH:mm:ss} UTC" }
+                        }},
+                        new { type = "divider" },
+                        new { type = "section", text = new { type = "mrkdwn", text = message } }
+                    }
+                }
+            }
+        }, ct);
+    }
+
+    public async Task SendBusinessEvent(string title, string message, CancellationToken ct,
+        string color = SlackSeverityColor.Info)
+    {
+        if (!_isEnabled) return;
+
+        await SendAsync(new
+        {
+            attachments = new[]
+            {
+                new
+                {
+                    color,
+                    blocks = new object[]
+                    {
+                        new { type = "header", text = new { type = "plain_text", text = $"📋 {title}", emoji = true } },
+                        new { type = "context", elements = new object[]
+                        {
+                            new { type = "mrkdwn", text = $"*Env:* `{_environment}`" },
+                            new { type = "mrkdwn", text = $"🕐 {DateTimeOffset.UtcNow:HH:mm:ss} UTC" }
+                        }},
+                        new { type = "divider" },
+                        new { type = "section", text = new { type = "mrkdwn", text = message } }
+                    }
+                }
+            }
+        }, ct);
+    }
+
+    private async Task SendAsync(object payload, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(_webhookUrl)) return;
+
+        var json = JsonSerializer.Serialize(payload);
+        using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        await _httpClient.PostAsync(_webhookUrl, content, ct);
+    }
+}

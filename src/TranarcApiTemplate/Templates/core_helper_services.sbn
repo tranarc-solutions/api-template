@@ -1,0 +1,13 @@
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Core.Common.Helpers;
+
+public static class Startup
+{
+    public static IServiceCollection AddHelperServices(this IServiceCollection services)
+    {
+        return services
+            .AddScoped<DbContextHelper>()
+            .AddScoped<IDbContextHelper>(sp => sp.GetRequiredService<DbContextHelper>());
+    }
+}

@@ -1,0 +1,31 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace Core.Hangfire.Jobs;
+
+/// <summary>
+///     Sample recurring job. Register in HangfireJobRegistration.
+/// </summary>
+public class SampleCleanupJob(
+    IServiceScopeFactory scopeFactory,
+    ILogger<SampleCleanupJob> logger)
+    : HangfireJobBase(scopeFactory, logger)
+{
+    public const string JobId = "sample-cleanup";
+
+    protected override string JobName => JobId;
+
+    public async Task ExecuteAsync(CancellationToken ct)
+    {
+        await ExecuteWithTrackingAsync(async token =>
+        {
+            using var scope = _scopeFactory.CreateScope();
+            // var repository = scope.ServiceProvider.GetRequiredService<IApplicationRepository<YourEntity>>();
+
+            _logger.LogInformation("Sample cleanup job running");
+
+            // Your job logic here
+            await Task.Delay(100, token);
+        }, ct);
+    }
+}

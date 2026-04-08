@@ -1,0 +1,58 @@
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+namespace Core.RateLimiting;
+
+public static class Startup
+{
+    public const string AuthPolicy = "auth";
+    public const string DefaultPolicy = "default";
+
+    public static IServiceCollection AddRateLimiting(this IServiceCollection services)
+    {
+        var environment = services.BuildServiceProvider().GetRequiredService<IHostEnvironment>();
+        if (environment.IsEnvironment("Testing"))
+            return services;
+
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+            options.AddPolicy(AuthPolicy, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    }));
+
+            options.AddPolicy(DefaultPolicy, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 100,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 2
+                    }));
+        });
+
+        return services;
+    }
+
+    public static IApplicationBuilder UseRateLimiting(this IApplicationBuilder app)
+    {
+        var environment = app.ApplicationServices.GetRequiredService<IHostEnvironment>();
+        if (environment.IsEnvironment("Testing"))
+            return app;
+
+        return app.UseRateLimiter();
+    }
+}

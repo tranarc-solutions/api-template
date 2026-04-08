@@ -1,0 +1,25 @@
+namespace Core.Auth.Authorization;
+
+public static class {{ name }}Claims
+{
+    public const string Permission = "permission";
+}
+
+// Add your permission resources here
+public enum {{ name }}Resource
+{
+    // Example: Users, Orders, Products
+}
+
+// Add your permission actions here
+public enum {{ name }}Action
+{
+    View,
+    Create,
+    Update,
+    Delete
+}
+
+// Source generator attribute — apply to {{ name }}Resource and {{ name }}Action
+[AttributeUsage(AttributeTargets.Enum)]
+public class PermissionsGeneratorAttribute : Attribute { }

@@ -1,0 +1,41 @@
+using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
+using Shared.Contracts.Interfaces;
+
+namespace Core.Common.Extensions;
+
+public static class ServiceLifeTimeExtensions
+{
+    private static readonly Assembly[] TargetAssemblies =
+    [
+        typeof(ServiceLifeTimeExtensions).Assembly, // Core
+        typeof(IScopedService).Assembly              // Shared
+    ];
+
+    public static IServiceCollection AddServicesToLifetime(this IServiceCollection services, Type markerInterfaceType,
+        ServiceLifetime lifetime)
+    {
+        var types = TargetAssemblies
+            .SelectMany(s => s.GetTypes())
+            .Where(p => p.IsClass && !p.IsAbstract && p.GetInterfaces().Any(i =>
+                i == markerInterfaceType || i.GetInterfaces().Any(ii => ii == markerInterfaceType)))
+            .ToList();
+
+        foreach (var implementationType in types)
+        {
+            var interfaceType = implementationType.GetInterfaces()
+                .FirstOrDefault(i => i != markerInterfaceType && markerInterfaceType.IsAssignableFrom(i));
+            if (interfaceType != null) services.Add(new ServiceDescriptor(interfaceType, implementationType, lifetime));
+        }
+
+        return services;
+    }
+
+    public static IServiceCollection AddLifeTimeServices(this IServiceCollection services)
+    {
+        return services
+            .AddServicesToLifetime(typeof(IScopedService), ServiceLifetime.Scoped)
+            .AddServicesToLifetime(typeof(ITransientService), ServiceLifetime.Transient)
+            .AddServicesToLifetime(typeof(ISingletonService), ServiceLifetime.Singleton);
+    }
+}

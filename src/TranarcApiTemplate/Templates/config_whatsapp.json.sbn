@@ -1,0 +1,9 @@
+{
+  "WhatsAppSettings": {
+    "Enabled": false,
+    "PhoneNumberId": "",
+    "AccessToken": "",
+    "WebhookVerifyToken": "",
+    "Templates": {}
+  }
+}
